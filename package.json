@@ -1,0 +1,16 @@
+{
+  "name": "orion-enterprise",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "preview": "npm --workspace apps/web run preview",
+    "check:migrations": "python3 scripts/check_migrations.py"
+  }
+}
