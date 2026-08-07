@@ -1,5 +1,5 @@
-
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Metric from "../components/Metric";
 import Page from "../components/Page";
 import { useTenant } from "../lib/tenant";
@@ -24,27 +24,48 @@ export default function Dashboard() {
       .catch((e) => setError(e?.message ?? "Unable to load dashboard."));
   }, [activeTenant]);
 
+  const commissioned = metrics.propertyCount > 0;
+
   return (
     <Page title="Portfolio command centre" kicker="OVERVIEW">
       {error && <div className="warning">{error}</div>}
+
+      {!commissioned && (
+        <div className="commission-banner">
+          <div>
+            <div className="eyebrow">ACTION REQUIRED</div>
+            <h2>Set up your first building</h2>
+            <p>Your company and administrator account are active. The next step is creating the first property hierarchy.</p>
+          </div>
+          <Link to="/setup" className="button-link">Start building setup</Link>
+        </div>
+      )}
+
       <div className="metrics">
         <Metric label="Properties" value={String(metrics.propertyCount)} sub="Active portfolio"/>
         <Metric label="Assets" value={String(metrics.assetCount)} sub="Registered assets"/>
         <Metric label="Open defects" value={String(metrics.openDefects)} sub="Requires action"/>
         <Metric label="Inspections" value={String(metrics.inspectionCount)} sub="Recorded history"/>
       </div>
+
       <div className="grid two">
         <article className="panel">
           <h2>Implementation status</h2>
           <ul className="clean">
             <li><b>1</b><span>Single ORION Enterprise v1.0 codebase</span></li>
-            <li><b>10</b><span>Ordered database migrations</span></li>
+            <li><b>11</b><span>Controlled database migrations</span></li>
             <li><b>Live</b><span>Tenant-aware dashboard metrics</span></li>
+            <li><b>{commissioned ? "✓" : "—"}</b><span>Building hierarchy commissioned</span></li>
           </ul>
         </article>
+
         <article className="panel">
-          <h2>Next commissioning task</h2>
-          <p>Create a fresh ORION Enterprise Supabase development project, apply migrations 001–010, seed baseline data and create the first administrator account.</p>
+          <h2>{commissioned ? "Portfolio ready" : "Next commissioning task"}</h2>
+          {commissioned ? (
+            <p>The first property is active. Continue by registering asset types and assets, then begin the inspection workflow.</p>
+          ) : (
+            <p>Use the guided setup wizard to create a property, its blocks, floors and communal lobby structure.</p>
+          )}
         </article>
       </div>
     </Page>
