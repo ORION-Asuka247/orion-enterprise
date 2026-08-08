@@ -42,10 +42,10 @@ export default function Dashboard() {
       )}
 
       <div className="metrics">
-        <Metric label="Properties" value={String(metrics.propertyCount)} sub="Active portfolio"/>
-        <Metric label="Assets" value={String(metrics.assetCount)} sub="Registered assets"/>
-        <Metric label="Open defects" value={String(metrics.openDefects)} sub="Requires action"/>
-        <Metric label="Inspections" value={String(metrics.inspectionCount)} sub="Recorded history"/>
+        <Metric label="Properties" value={String(metrics.propertyCount)} sub="Active portfolio" />
+        <Metric label="Assets" value={String(metrics.assetCount)} sub="Registered assets" />
+        <Metric label="Open defects" value={String(metrics.openDefects)} sub="Requires action" />
+        <Metric label="Inspections" value={String(metrics.inspectionCount)} sub="Recorded history" />
       </div>
 
       <div className="grid two">
@@ -53,8 +53,8 @@ export default function Dashboard() {
           <h2>Implementation status</h2>
           <ul className="clean">
             <li><b>1</b><span>Single ORION Enterprise v1.0 codebase</span></li>
-            <li><b>11</b><span>Controlled database migrations</span></li>
-            <li><b>Live</b><span>Tenant-aware dashboard metrics</span></li>
+            <li><b>Live</b><span>Controlled database migration chain</span></li>
+            <li><b>Live</b><span>Tenant-aware operational metrics</span></li>
             <li><b>{commissioned ? "✓" : "—"}</b><span>Building hierarchy commissioned</span></li>
           </ul>
         </article>
@@ -62,7 +62,7 @@ export default function Dashboard() {
         <article className="panel">
           <h2>{commissioned ? "Portfolio ready" : "Next commissioning task"}</h2>
           {commissioned ? (
-            <p>The first property is active. Continue by registering asset types and assets, then begin the inspection workflow.</p>
+            <p>The first property is active. Continue through asset registration, controlled inspections, remedial actions and reporting.</p>
           ) : (
             <p>Use the guided setup wizard to create a property, its blocks, floors and communal lobby structure.</p>
           )}
