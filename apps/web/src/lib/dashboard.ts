@@ -1,4 +1,3 @@
-
 import { supabase } from "./supabase";
 
 export type DashboardMetrics = {
@@ -13,16 +12,18 @@ export async function loadDashboardMetrics(companyId: string): Promise<Dashboard
     return { propertyCount: 0, assetCount: 0, openDefects: 0, inspectionCount: 0 };
   }
 
-  const [
-    properties,
-    assets,
-    defects,
-    inspections
-  ] = await Promise.all([
-    supabase.from("properties").select("*", { count: "exact", head: true }).eq("company_id", companyId),
-    supabase.from("assets").select("*", { count: "exact", head: true }).eq("company_id", companyId),
-    supabase.from("defects").select("*", { count: "exact", head: true }).eq("company_id", companyId).not("status", "in", '("closed","cancelled")'),
-    supabase.from("inspections").select("*", { count: "exact", head: true }).eq("company_id", companyId)
+  const [properties, assets, defects, inspections] = await Promise.all([
+    supabase.from("properties").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    supabase.from("assets").select("id", { count: "exact", head: true }).eq("company_id", companyId),
+    supabase
+      .from("orion_inspection_defects")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .not("status", "in", "(closed,verified)"),
+    supabase
+      .from("orion_inspection_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
   ]);
 
   for (const result of [properties, assets, defects, inspections]) {
