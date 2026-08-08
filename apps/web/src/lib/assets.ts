@@ -25,23 +25,29 @@ export type AssetRow = {
   floors: { name: string } | null;
 };
 
+function dedupeAssetTypes(rows: AssetType[]): AssetType[] {
+  const byCode = new Map<string, AssetType>();
+  for (const row of rows) {
+    const key = (row.code || row.name).trim().toUpperCase();
+    if (!byCode.has(key)) byCode.set(key, row);
+  }
+  return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export async function loadAssetTypes(companyId: string): Promise<AssetType[]> {
   if (!supabase) return [];
-
   const { data, error } = await supabase
     .from("asset_types")
     .select("id,code,name,compliance_domain,inspection_frequency_months")
     .or(`company_id.eq.${companyId},company_id.is.null`)
     .eq("is_active", true)
     .order("name");
-
   if (error) throw error;
-  return (data ?? []) as AssetType[];
+  return dedupeAssetTypes((data ?? []) as AssetType[]);
 }
 
 export async function loadAssets(companyId: string, search = ""): Promise<AssetRow[]> {
   if (!supabase) return [];
-
   let q = supabase
     .from("assets")
     .select(`
