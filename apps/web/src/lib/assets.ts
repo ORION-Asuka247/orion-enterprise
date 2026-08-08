@@ -64,7 +64,7 @@ export async function loadAssets(companyId: string, search = ""): Promise<AssetR
     .order("asset_code");
 
   if (search.trim()) {
-    const s = search.trim().replaceAll(",", "");
+    const s = search.trim().replace(/,/g, "");
     q = q.or(
       `asset_code.ilike.%${s}%,serial_number.ilike.%${s}%,manufacturer.ilike.%${s}%,name.ilike.%${s}%`
     );
