@@ -136,3 +136,42 @@ button.secondary{background:#1a232d;color:#d9e1e9;border:1px solid #344150}
     padding:24px;
   }
 }
+
+/* ORION v1.0 Implementation - Update 014 Guided Inspection Engine */
+.inspection-start-card{max-width:760px}
+.inspection-start-card h2{font-size:1.7rem;margin:7px 0 10px}
+.inspection-progress{display:grid;grid-template-columns:auto auto 1fr;gap:24px;align-items:center;margin-bottom:16px}
+.inspection-progress>div:not(.progress-bar){display:grid;gap:4px}
+.inspection-progress span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#82909e;font-weight:800}
+.inspection-progress strong{font-size:1.5rem}
+.progress-bar{height:10px;background:#0c1117;border:1px solid #26313c;border-radius:999px;overflow:hidden}
+.progress-bar i{display:block;height:100%;background:#b9c5d0;transition:width .2s ease}
+.inspection-error{margin-bottom:16px}
+.inspection-question-list{display:grid;gap:16px}
+.inspection-question{transition:border-color .15s ease}
+.inspection-pass{border-color:#315646}
+.inspection-fail{border-color:#70403f}
+.inspection-question-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.inspection-question-header h2{font-size:1.15rem;margin:6px 0}
+.inspection-question-header p{margin:7px 0 0}
+.inspection-result{border:1px solid #3a4652;border-radius:999px;padding:6px 10px;font-size:.72rem;font-weight:900;letter-spacing:.08em}
+.result-pass{border-color:#315646;color:#bfe5d5;background:#13251f}
+.result-fail{border-color:#70403f;color:#f1c3c1;background:#2a1717}
+.inspection-field{display:grid;gap:8px;margin-top:16px;color:#aeb8c3;font-size:.84rem;font-weight:700}
+.inspection-field input,.inspection-field textarea,.inspection-field select{width:100%;background:#0f151d;color:#eef3f8;border:1px solid #344150;border-radius:10px;padding:12px}
+.inspection-field textarea{min-height:90px;resize:vertical}
+.inspection-field small{color:#7f8c9a;font-weight:500}
+.inspection-choice-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.choice-selected{box-shadow:0 0 0 2px rgba(255,255,255,.16)}
+.failure-reason{margin-top:16px;border-left:3px solid #80504d;background:#211616;border-radius:0 10px 10px 0;padding:13px 15px}
+.failure-reason p{margin:4px 0 12px}
+.evidence-alert{margin-top:12px;padding:10px 12px;border:1px solid #765348;background:#251b17;border-radius:9px;color:#e8c9ba}
+.evidence-confirmed{margin-top:12px;padding:10px 12px;border:1px solid #315646;background:#13251f;border-radius:9px;color:#bfe5d5}
+.inspection-actions{display:flex;justify-content:flex-end;margin-top:16px}
+.inspection-submit{margin-top:16px}
+.inspection-submit>small{display:block;margin-top:10px;color:#7f8c9a}
+@media(max-width:720px){
+  .inspection-progress{grid-template-columns:1fr 1fr}
+  .progress-bar{grid-column:1/-1}
+  .inspection-question-header{flex-direction:column}
+}
