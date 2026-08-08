@@ -10,6 +10,7 @@ import AssetInspection from "./pages/AssetInspection";
 import Inspections from "./pages/Inspections";
 import Works from "./pages/Works";
 import Reports from "./pages/Reports";
+import ReportDetail from "./pages/ReportDetail";
 import Regulatory from "./pages/Regulatory";
 import Intelligence from "./pages/Intelligence";
 import Portal from "./pages/Portal";
@@ -31,6 +32,7 @@ const router = createBrowserRouter([{
     { path: "inspections", element: <Inspections /> },
     { path: "works", element: <Works /> },
     { path: "reports", element: <Reports /> },
+    { path: "reports/:reportId", element: <ReportDetail /> },
     { path: "regulatory", element: <Regulatory /> },
     { path: "intelligence", element: <Intelligence /> },
     { path: "portal", element: <Portal /> }
