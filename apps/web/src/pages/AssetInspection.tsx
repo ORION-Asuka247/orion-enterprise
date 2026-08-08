@@ -108,16 +108,21 @@ export default function AssetInspection() {
   }
 
   function setDraft(itemId: string, patch: Partial<Draft>) {
-    setDrafts(current => ({
-      ...current,
-      [itemId]: {
+    setDrafts(current => {
+      const previous: Draft = current[itemId] || {
         responseText: "",
         responseNumber: "",
-        notes: "",
-        ...(current[itemId] || {}),
-        ...patch
-      }
-    }));
+        notes: ""
+      };
+
+      return {
+        ...current,
+        [itemId]: {
+          ...previous,
+          ...patch
+        }
+      };
+    });
   }
 
   async function save(item: InspectionItem) {
