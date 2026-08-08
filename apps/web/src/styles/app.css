@@ -50,3 +50,19 @@ button.secondary{background:#1a232d;color:#d9e1e9;border:1px solid #344150}
  .commission-banner,.property-heading,.page-toolbar{align-items:stretch;flex-direction:column}
  .property-stats{align-items:stretch}
 }
+/* ORION v1.0 Implementation — Asset Register 012R */
+.asset-create{margin-bottom:16px}
+.setup-form select,.asset-search input{width:100%;background:#0f151d;color:#eef3f8;border:1px solid #344150;border-radius:10px;padding:12px}
+.asset-search{display:grid;grid-template-columns:1fr auto auto;gap:10px;margin-bottom:16px}
+.asset-table{padding:0;overflow:hidden}
+.asset-row{display:grid;grid-template-columns:1.25fr 1fr 1.8fr .75fr .7fr;gap:12px;align-items:center;padding:13px 16px;border-top:1px solid #202a35}
+.asset-row:first-child{border-top:0}
+.asset-head{font-size:.72rem;color:#7f8c9a;font-weight:800;letter-spacing:.06em;background:#0f151d}
+.asset-row small{display:block;color:#7f8c9a;margin-top:3px}
+.asset-row code{font-size:.76rem;color:#aab5c0}
+.empty-inline{padding:28px;text-align:center;color:#84919f}
+@media(max-width:850px){
+ .asset-row{grid-template-columns:1fr 1fr}
+ .asset-head{display:none}
+ .asset-search{grid-template-columns:1fr}
+}
