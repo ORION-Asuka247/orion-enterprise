@@ -66,3 +66,73 @@ button.secondary{background:#1a232d;color:#d9e1e9;border:1px solid #344150}
  .asset-head{display:none}
  .asset-search{grid-template-columns:1fr}
 }
+
+/* ORION v1.0 Implementation - Update 013 QR + Asset History */
+.toolbar-actions{display:flex;gap:10px;align-items:center}
+.secondary-link{background:#1a232d;color:#d9e1e9;border:1px solid #344150}
+.asset-row-link{color:inherit;text-decoration:none;transition:background .15s ease}
+.asset-row-link:hover{background:#17212b}
+.asset-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;margin-bottom:16px}
+.asset-title-row{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.asset-title-row h2{font-size:2rem;margin:6px 0}
+.asset-title-row p{margin:0}
+.status-badge{display:inline-flex;border:1px solid #344150;border-radius:999px;padding:7px 10px;text-transform:capitalize;color:#b8c2cc}
+.status-active{border-color:#355849;color:#c7eadc;background:#13251f}
+.detail-list{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:20px 0 0}
+.detail-list>div{padding:13px 0;border-top:1px solid #202a35}
+.detail-list>div:nth-child(odd){padding-right:20px}
+.detail-list dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#788696;font-weight:800}
+.detail-list dd{margin:5px 0 0;color:#eef3f8}
+.asset-notes{margin-top:18px;padding-top:16px;border-top:1px solid #202a35}
+.qr-card{text-align:center;align-self:start}
+.qr-code-wrap{display:grid;place-items:center;background:#fff;border-radius:14px;padding:18px;margin:16px auto;width:max-content;max-width:100%}
+.qr-card>strong{display:block;font-size:1.3rem}
+.qr-card>small{display:block;color:#7f8c9a;word-break:break-all;margin:6px 0 12px}
+.qr-card p{font-size:.86rem}
+.asset-history-metrics{margin-top:0}
+.section-heading{display:flex;justify-content:space-between;align-items:center}
+.asset-timeline{margin-top:12px}
+.timeline-item{position:relative;display:grid;grid-template-columns:18px 1fr;gap:12px;padding:14px 0;border-top:1px solid #202a35}
+.timeline-item:first-child{border-top:0}
+.timeline-dot{width:9px;height:9px;border-radius:50%;background:#8794a2;margin-top:6px}
+.timeline-meta{display:flex;justify-content:space-between;gap:10px;color:#7f8c9a;font-size:.76rem;margin-bottom:5px}
+.timeline-item p{margin:4px 0 0;font-size:.9rem}
+.scan-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.55fr);gap:16px}
+.mode-switch{display:flex;gap:10px;margin-bottom:16px}
+.qr-scanner{display:grid;gap:14px}
+.scanner-frame{position:relative;min-height:360px;background:#070a0e;border:1px solid #2a3541;border-radius:14px;overflow:hidden}
+.scanner-frame video{display:block;width:100%;height:420px;object-fit:cover}
+.scanner-target{position:absolute;left:50%;top:50%;width:min(260px,70%);aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+.scanner-message{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:8px 12px;border-radius:999px}
+.manual-lookup{display:grid;gap:14px}
+.manual-lookup label{display:grid;gap:8px;color:#aeb8c3;font-size:.84rem;font-weight:700}
+.manual-lookup input{width:100%;background:#0f151d;color:#eef3f8;border:1px solid #344150;border-radius:10px;padding:13px}
+.scan-warning{margin-top:14px}
+.scan-guidance ol{padding-left:20px;color:#aab5c0;line-height:1.8}
+.print-only{display:none}
+
+@media(max-width:900px){
+  .asset-detail-grid,.scan-layout{grid-template-columns:1fr}
+  .qr-card{order:-1}
+}
+@media(max-width:650px){
+  .toolbar-actions{align-items:stretch;flex-direction:column}
+  .detail-list{grid-template-columns:1fr}
+  .detail-list>div:nth-child(odd){padding-right:0}
+  .scanner-frame video{height:330px}
+}
+@media print{
+  body *{visibility:hidden!important}
+  .asset-label-print,.asset-label-print *{visibility:visible!important}
+  .asset-label-print{
+    display:block!important;
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    color:#000;
+    background:#fff;
+    text-align:center;
+    padding:24px;
+  }
+}

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Page from "../components/Page";
 import { useTenant } from "../lib/tenant";
 import { loadPropertyHierarchy, type PropertyHierarchy } from "../lib/setup";
@@ -12,6 +13,7 @@ import {
 
 export default function Assets() {
   const { activeTenant } = useTenant();
+  const navigate = useNavigate();
 
   const [assets, setAssets] = useState<AssetRow[]>([]);
   const [types, setTypes] = useState<AssetType[]>([]);
@@ -37,6 +39,7 @@ export default function Assets() {
     if (!activeTenant) return;
 
     setError("");
+
     try {
       const [a, t, p] = await Promise.all([
         loadAssets(activeTenant.id, q),
@@ -74,7 +77,7 @@ export default function Assets() {
     setError("");
 
     try {
-      await createAsset({
+      const createdId = await createAsset({
         companyId: activeTenant.id,
         propertyId,
         blockId: blockId || undefined,
@@ -89,16 +92,8 @@ export default function Assets() {
         condition
       });
 
-      setAssetCode("");
-      setAssetName("");
-      setManufacturer("");
-      setModel("");
-      setSerial("");
-      setInstallDate("");
-      setCondition("unknown");
       setShowCreate(false);
-
-      await refresh("");
+      navigate(`/assets/${createdId}`);
     } catch (e: any) {
       setError(e?.message ?? "Unable to register asset.");
     } finally {
@@ -111,13 +106,18 @@ export default function Assets() {
       <div className="page-toolbar">
         <div>
           <p className="muted">
-            Every ORION asset receives a permanent code and QR identity while retaining manual lookup as a fallback.
+            Every ORION asset has a permanent code and QR identity. Manual lookup remains available at all times.
           </p>
         </div>
 
-        <button onClick={() => setShowCreate(v => !v)}>
-          {showCreate ? "Close" : "Register asset"}
-        </button>
+        <div className="toolbar-actions">
+          <Link className="button-link secondary-link" to="/assets/scan">
+            Scan / Find asset
+          </Link>
+          <button onClick={() => setShowCreate(v => !v)}>
+            {showCreate ? "Close" : "Register asset"}
+          </button>
+        </div>
       </div>
 
       {error && <div className="warning">{error}</div>}
@@ -213,11 +213,7 @@ export default function Assets() {
 
             <label>
               Installation date
-              <input
-                type="date"
-                value={installDate}
-                onChange={e => setInstallDate(e.target.value)}
-              />
+              <input type="date" value={installDate} onChange={e => setInstallDate(e.target.value)} />
             </label>
 
             <label>
@@ -234,7 +230,7 @@ export default function Assets() {
 
           <div className="setup-actions">
             <button disabled={busy}>
-              {busy ? "Registering…" : "Register asset"}
+              {busy ? "Registering..." : "Register asset"}
             </button>
           </div>
         </form>
@@ -270,31 +266,23 @@ export default function Assets() {
           <span>QR ID</span>
         </div>
 
-        {assets.length === 0 && (
-          <div className="empty-inline">No assets registered.</div>
-        )}
+        {assets.length === 0 && <div className="empty-inline">No assets registered.</div>}
 
         {assets.map(asset => (
-          <div className="asset-row" key={asset.id}>
+          <Link className="asset-row asset-row-link" to={`/assets/${asset.id}`} key={asset.id}>
             <span>
               <strong>{asset.asset_code}</strong>
               <small>{asset.name || [asset.manufacturer, asset.model].filter(Boolean).join(" ")}</small>
             </span>
-
             <span>{asset.asset_types?.name || "Unclassified"}</span>
-
             <span>
               {[asset.properties?.name, asset.blocks?.name, asset.floors?.name]
                 .filter(Boolean)
-                .join(" · ") || "—"}
+                .join(" - ") || "-"}
             </span>
-
             <span>{asset.status}</span>
-
-            <span>
-              <code>{asset.qr_token ? asset.qr_token.slice(0, 8) : "—"}</code>
-            </span>
-          </div>
+            <span><code>{asset.qr_token ? asset.qr_token.slice(0, 8) : "-"}</code></span>
+          </Link>
         ))}
       </div>
     </Page>
