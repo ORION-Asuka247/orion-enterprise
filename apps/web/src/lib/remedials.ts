@@ -38,8 +38,21 @@ const ACTION_RULES: ActionRule[] = [
   },
   {
     code: "REPLACE_SEALS",
-    label: "Replace defective, damaged, incomplete or painted-over fire/smoke seals with a compatible continuous system",
-    patterns: [/seal .*paint/i, /painted .*seal/i, /seal .*damag/i, /damaged .*seal/i, /seal .*incomplete/i, /missing .*seal/i, /incorrectly.*seal/i]
+    label: "Replace defective, damaged, incomplete, painted-over or incorrectly repaired fire/smoke seals with a compatible continuous system",
+    patterns: [
+      /seal .*paint/i,
+      /painted .*seal/i,
+      /seal .*damag/i,
+      /damaged .*seal/i,
+      /seal .*incomplete/i,
+      /incomplete .*seal/i,
+      /missing .*seal/i,
+      /seal .*missing/i,
+      /incorrectly.*seal/i,
+      /seal .*incorrect/i,
+      /seal .*repaired incorrectly/i,
+      /full.?length replacement/i
+    ]
   },
   {
     code: "REPLACE_HINGES",
@@ -79,12 +92,19 @@ const ACTION_RULES: ActionRule[] = [
   {
     code: "SECURE_THRESHOLD",
     label: "Secure the loose/unfixed threshold or metal panel and verify the resulting threshold condition",
-    patterns: [/metal threshold/i, /metal panel .*not secured/i, /threshold .*not secured/i]
+    patterns: [
+      /metal threshold/i,
+      /metal panel .*not secured/i,
+      /metal panel .*unsecured/i,
+      /threshold .*not secured/i,
+      /threshold .*unsecured/i,
+      /panel .*unsecured/i
+    ]
   },
   {
     code: "CLEAR_STORAGE",
     label: "Remove stored combustible/obstructive items from the fire-safety cupboard and keep the area clear",
-    patterns: [/storage of/i, /stored in .*cupboard/i, /bike/i, /cardboard/i]
+    patterns: [/storage of/i, /stored in .*cupboard/i, /bike/i, /cardboard/i, /stored materials/i]
   },
   {
     code: "CLOSER",
@@ -94,7 +114,7 @@ const ACTION_RULES: ActionRule[] = [
   {
     code: "ASSET_ID",
     label: "Correct the permanent ORION/door identification reference at the next attendance",
-    patterns: [/door id .*change/i, /id .*changed/i]
+    patterns: [/door id .*change/i, /id .*changed/i, /door id change/i]
   }
 ];
 
