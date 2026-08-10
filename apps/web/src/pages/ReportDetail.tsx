@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Page from "../components/Page";
-import {
-  createReportEvidenceLinks,
-  issueReport,
-  loadReport,
-  loadReportVersions,
-  type ReportEvidenceLink,
-  type ReportRow,
-  type ReportVersion
-} from "../lib/reports";
+import { issueReport, loadReport, loadReportVersions, type ReportRow, type ReportVersion } from "../lib/reports";
 
 function value(v: unknown) {
   return v == null || v === "" ? "—" : String(v);
@@ -20,7 +12,6 @@ export default function ReportDetail() {
   const [report, setReport] = useState<ReportRow | null>(null);
   const [versions, setVersions] = useState<ReportVersion[]>([]);
   const [selected, setSelected] = useState<ReportVersion | null>(null);
-  const [evidenceLinks, setEvidenceLinks] = useState<ReportEvidenceLink[]>([]);
   const [error, setError] = useState("");
   const [issuing, setIssuing] = useState(false);
 
@@ -38,19 +29,6 @@ export default function ReportDetail() {
   }
 
   useEffect(() => { load(); }, [reportId]);
-
-  useEffect(() => {
-    let active = true;
-    async function loadEvidence() {
-      const rows = Array.isArray(selected?.source_snapshot?.evidence) ? selected!.source_snapshot.evidence : [];
-      const links = await createReportEvidenceLinks(rows);
-      if (active) setEvidenceLinks(links);
-    }
-    loadEvidence().catch(() => {
-      if (active) setEvidenceLinks([]);
-    });
-    return () => { active = false; };
-  }, [selected]);
 
   async function markIssued() {
     if (!report) return;
@@ -77,8 +55,6 @@ export default function ReportDetail() {
   const answers = Array.isArray(s.answers) ? s.answers : [];
   const defects = Array.isArray(s.defects) ? s.defects : [];
   const evidence = Array.isArray(s.evidence) ? s.evidence : [];
-  const failedCount = answers.filter((a: any) => a.result === "fail").length;
-  const passedCount = answers.filter((a: any) => a.result === "pass").length;
 
   return (
     <Page title={report.title} kicker="CONTROLLED REPORT">
@@ -100,14 +76,6 @@ export default function ReportDetail() {
         <h1>{report.title}</h1>
         <p><strong>Document:</strong> {report.document_number} &nbsp; <strong>Version:</strong> {selected.version_no} &nbsp; <strong>Status:</strong> {report.status}</p>
         <hr />
-
-        <section className={`panel inspection-question inspection-${inspection.outcome || "na"}`}>
-          <div className="eyebrow">Inspection outcome</div>
-          <h2>{value(inspection.outcome).toUpperCase()}</h2>
-          <p><strong>Checks:</strong> {answers.length} &nbsp; <strong>Passed:</strong> {passedCount} &nbsp; <strong>Failed:</strong> {failedCount} &nbsp; <strong>Evidence:</strong> {evidence.length}</p>
-          {report.status === "issued" && report.issued_at && <p><strong>Issued:</strong> {new Date(report.issued_at).toLocaleString()}</p>}
-        </section>
-
         <h2>Executive summary</h2>
         <p>Controlled inspection outcome: <strong>{value(inspection.outcome).toUpperCase()}</strong>. This report is generated from the immutable ORION inspection snapshot recorded at {new Date(selected.generated_at).toLocaleString()}.</p>
 
@@ -141,26 +109,7 @@ export default function ReportDetail() {
         ))}
 
         <h2>Evidence register</h2>
-        {evidenceLinks.length === 0 ? (
-          <p>{evidence.length} evidence item(s) recorded within the controlled inspection record.</p>
-        ) : (
-          <div className="inspection-question-list report-evidence-grid">
-            {evidenceLinks.map((item, index) => (
-              <section className="panel inspection-question" key={item.key}>
-                <div className="eyebrow">Evidence {index + 1}{item.itemCode ? ` · ${item.itemCode}` : ""}</div>
-                <h3>{item.fileName}</h3>
-                {item.capturedAt && <p><strong>Captured:</strong> {new Date(item.capturedAt).toLocaleString()}</p>}
-                {item.url && (!item.mimeType || item.mimeType.startsWith("image/")) ? (
-                  <img src={item.url} alt={`Inspection evidence ${index + 1} for ${value(asset.asset_code)}`} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 8 }} />
-                ) : item.url ? (
-                  <p><a href={item.url} target="_blank" rel="noreferrer">Open evidence file</a></p>
-                ) : (
-                  <p>Evidence file retained in secure ORION storage. Preview unavailable.</p>
-                )}
-              </section>
-            ))}
-          </div>
-        )}
+        <p>{evidence.length} evidence item(s) recorded within the controlled inspection record.</p>
 
         {report.report_type === "fraew_report" && (
           <>
