@@ -30,6 +30,15 @@ export type ReportVersion = {
   notes: string | null;
 };
 
+export type ReportEvidenceLink = {
+  key: string;
+  url: string | null;
+  fileName: string;
+  mimeType: string | null;
+  capturedAt: string | null;
+  itemCode: string | null;
+};
+
 export async function loadReports(companyId: string): Promise<ReportRow[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
@@ -84,6 +93,30 @@ export async function loadReportVersions(reportId: string): Promise<ReportVersio
     .order("version_no", { ascending: false });
   if (error) throw error;
   return (data ?? []) as ReportVersion[];
+}
+
+export async function createReportEvidenceLinks(evidence: any[]): Promise<ReportEvidenceLink[]> {
+  if (!supabase || !Array.isArray(evidence) || evidence.length === 0) return [];
+
+  return Promise.all(evidence.map(async (item: any, index: number) => {
+    const bucket = item.storage_bucket || "inspection-evidence";
+    const path = item.storage_path || "";
+    let url: string | null = null;
+
+    if (path) {
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+      if (!error) url = data?.signedUrl || null;
+    }
+
+    return {
+      key: item.id || path || String(index),
+      url,
+      fileName: item.file_name || `Evidence ${index + 1}`,
+      mimeType: item.mime_type || null,
+      capturedAt: item.captured_at || item.created_at || null,
+      itemCode: item.item_code || null
+    };
+  }));
 }
 
 export async function issueReport(reportId: string) {
