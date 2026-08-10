@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Page from "../components/Page";
+import AdminRateEditor from "../components/AdminRateEditor";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
 import { consolidateRemedials } from "../lib/remedials";
 import { loadPricingConfig, priceRemedialPackages, type ClientRateProfile, type PricingConfig } from "../lib/pricing";
-import { loadCommercialPricingAccess, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
+import { loadCommercialPricingAccess, loadCommercialRateEditAccess, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
 import { useTenant } from "../lib/tenant";
 
 const statusOrder: OrionDefectStatus[] = ["open", "assigned", "in_progress", "resolved", "verified", "closed", "cancelled"];
@@ -20,6 +21,7 @@ function money(value: number) {
 export default function Works() {
   const { activeTenant } = useTenant();
   const [commercialAccess, setCommercialAccess] = useState(false);
+  const [commercialEditAccess, setCommercialEditAccess] = useState(false);
   const [commercialAccessLoading, setCommercialAccessLoading] = useState(true);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
   const [rows, setRows] = useState<OrionDefect[]>([]);
@@ -54,6 +56,7 @@ export default function Works() {
     let cancelled = false;
     async function resolveCommercialAccess() {
       setCommercialAccess(false);
+      setCommercialEditAccess(false);
       setPricingConfig(null);
       setCommercialAccessLoading(true);
       const companyId = activeTenant?.id;
@@ -61,7 +64,10 @@ export default function Works() {
         if (!cancelled) setCommercialAccessLoading(false);
         return;
       }
-      const allowed = await loadCommercialPricingAccess(companyId);
+      const [allowed, canEdit] = await Promise.all([
+        loadCommercialPricingAccess(companyId),
+        loadCommercialRateEditAccess(companyId)
+      ]);
       if (!allowed) {
         if (!cancelled) setCommercialAccessLoading(false);
         return;
@@ -70,6 +76,7 @@ export default function Works() {
         const config = await loadPricingConfig(companyId);
         if (!cancelled) {
           setCommercialAccess(true);
+          setCommercialEditAccess(canEdit);
           setPricingConfig(config);
         }
       } catch (e) {
@@ -151,14 +158,14 @@ export default function Works() {
           <div><span>Packages</span><strong>{packages.length}</strong></div>
           <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
           <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
-          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : pricingVisible ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
+          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : pricingVisible && pricing ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
         </div>
 
         <div className="warning" style={{ marginTop: 16 }}>
           Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; internal rate selection, material allowances and selling price are separate approval stages.
         </div>
 
-        {!commercialAccessLoading && pricingVisible && (
+        {!commercialAccessLoading && pricingVisible && pricing && activeRate && (
           <section className="panel" style={{ marginTop: 18 }}>
             <div className="eyebrow">INTERNAL ASUKA247 COMMERCIAL CONTROL — AUTHORISED USERS ONLY</div>
             <div className="page-toolbar">
@@ -197,6 +204,14 @@ export default function Works() {
                 ORION is withholding a complete quotation because {pricing.reviewCount} package{pricing.reviewCount === 1 ? "" : "s"} contain unapproved action rates or require technical review. No incomplete package is included in the displayed price-ready total.
               </div>
             )}
+
+            {commercialEditAccess && activeTenant && pricingConfig && (
+              <AdminRateEditor
+                companyId={activeTenant.id}
+                config={pricingConfig}
+                onSaved={setPricingConfig}
+              />
+            )}
           </section>
         )}
 
@@ -209,7 +224,7 @@ export default function Works() {
 
         {showPackages && packages.length > 0 && (
           <div className="inspection-question-list" style={{ marginTop: 18 }}>
-            {(pricingVisible ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
+            {(pricingVisible && pricing ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
               const pkg = row.package;
               return (
                 <section className="panel inspection-question" key={pkg.assetId}>
