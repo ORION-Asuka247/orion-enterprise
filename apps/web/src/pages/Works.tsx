@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Page from "../components/Page";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
+import { consolidateRemedials } from "../lib/remedials";
 import { useTenant } from "../lib/tenant";
 
 const statusOrder: OrionDefectStatus[] = ["open", "assigned", "in_progress", "resolved", "verified", "closed", "cancelled"];
@@ -18,6 +19,7 @@ export default function Works() {
   const [filter, setFilter] = useState<"all" | "active" | "resolved">("active");
   const [busy, setBusy] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [showPackages, setShowPackages] = useState(true);
 
   async function refresh() {
     if (!activeTenant) {
@@ -44,6 +46,10 @@ export default function Works() {
     active: rows.filter(r => !["resolved", "verified", "closed", "cancelled"].includes(r.status)).length,
     resolved: rows.filter(r => ["resolved", "verified", "closed"].includes(r.status)).length
   }), [rows]);
+
+  const packages = useMemo(() => consolidateRemedials(rows), [rows]);
+  const packagesNeedingReview = useMemo(() => packages.filter(p => p.requiresReview).length, [packages]);
+  const technicalActions = useMemo(() => packages.reduce((sum, p) => sum + p.actions.length, 0), [packages]);
 
   const visible = useMemo(() => rows.filter(row => {
     if (filter === "all") return true;
@@ -78,10 +84,76 @@ export default function Works() {
         <div><span>Resolved</span><strong>{counts.resolved}</strong></div>
       </div>
 
+      <section className="panel">
+        <div className="page-toolbar">
+          <div>
+            <div className="eyebrow">REMEDIAL CONSOLIDATION ENGINE</div>
+            <h2>{packages.length} asset work packages from {counts.active} active defects</h2>
+            <p className="muted">
+              ORION groups all active findings by asset, then converts the source findings into one technical repair package per asset. Pricing is deliberately excluded until the technical package has been reviewed.
+            </p>
+          </div>
+          <button type="button" className="secondary" onClick={() => setShowPackages(v => !v)}>
+            {showPackages ? "Hide packages" : "Show packages"}
+          </button>
+        </div>
+
+        <div className="inspection-progress">
+          <div><span>Packages</span><strong>{packages.length}</strong></div>
+          <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
+          <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
+          <div><span>Commercial status</span><strong>UNPRICED</strong></div>
+        </div>
+
+        <div className="warning" style={{ marginTop: 16 }}>
+          Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; contractor cost, management allowances and selling price are separate approval stages.
+        </div>
+
+        {showPackages && packages.length > 0 && (
+          <div className="inspection-question-list" style={{ marginTop: 18 }}>
+            {packages.map(pkg => (
+              <section className="panel inspection-question" key={pkg.assetId}>
+                <div className="inspection-question-header">
+                  <div>
+                    <div className="eyebrow">
+                      {pkg.sourceDoorId || pkg.assetCode} · {pkg.severity.toUpperCase()} · {pkg.defectCodes.length} SOURCE DEFECT{pkg.defectCodes.length === 1 ? "" : "S"}
+                    </div>
+                    <h3>{pkg.assetName || pkg.assetCode}</h3>
+                  </div>
+                  <span className={`inspection-result result-${pkg.requiresReview ? "fail" : "na"}`}>
+                    {pkg.requiresReview ? "REVIEW" : "CONSOLIDATED"}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Source findings</strong>
+                  {pkg.findings.map((finding, index) => <p key={`${pkg.assetId}-finding-${index}`}>{finding}</p>)}
+                </div>
+
+                <div className="failure-reason">
+                  <strong>Consolidated remedial package</strong>
+                  {pkg.actions.length === 0 ? (
+                    <p>No deterministic remedial rule matched this finding. Competent-person review is required before pricing.</p>
+                  ) : (
+                    <ol>
+                      {pkg.actions.map(action => <li key={`${pkg.assetId}-${action.code}`}>{action.label}</li>)}
+                    </ol>
+                  )}
+                </div>
+
+                <div className="inspection-actions">
+                  <Link className="button-link secondary-link" to={`/assets/${pkg.assetId}`}>Asset record</Link>
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </section>
+
       <div className="page-toolbar">
         <div>
           <h2>Defect & remedial register</h2>
-          <p className="muted">Failed controlled inspection items flow here automatically for action, resolution and verification.</p>
+          <p className="muted">Failed controlled inspection items remain individually auditable beneath the consolidated work packages.</p>
         </div>
         <div className="inspection-choice-grid">
           {(["active", "resolved", "all"] as const).map(value => (
