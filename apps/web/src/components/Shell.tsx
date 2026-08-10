@@ -21,6 +21,12 @@ export default function Shell() {
   return <div className="app-shell">
     <aside>
       <div className="brand">ORION<span>ENTERPRISE</span></div>
+      <a
+        href="https://asuka247.uk/"
+        className="home-link"
+        aria-label="Back to ASUKA247 home page"
+        style={{ display: "block", margin: "12px 0 16px", textDecoration: "none", fontWeight: 700 }}
+      >← ASUKA247 Home</a>
 
       {tenants.length > 0 && (
         <select
