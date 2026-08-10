@@ -4,6 +4,8 @@ import Page from "../components/Page";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
 import { consolidateRemedials } from "../lib/remedials";
 import { priceRemedialPackages, RATE_PROFILES, type ClientRateProfile } from "../lib/pricing";
+import { canViewCommercialPricing, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
+import { useAuth } from "../lib/auth";
 import { useTenant } from "../lib/tenant";
 
 const statusOrder: OrionDefectStatus[] = ["open", "assigned", "in_progress", "resolved", "verified", "closed", "cancelled"];
@@ -18,6 +20,8 @@ function money(value: number) {
 
 export default function Works() {
   const { activeTenant } = useTenant();
+  const { user } = useAuth();
+  const commercialAccess = canViewCommercialPricing(user);
   const [rows, setRows] = useState<OrionDefect[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,56 +114,65 @@ export default function Works() {
           <div><span>Packages</span><strong>{packages.length}</strong></div>
           <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
           <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
-          <div><span>Price-ready packages</span><strong>{pricing.readyCount}</strong></div>
+          <div><span>Commercial status</span><strong>{commercialAccess ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
         </div>
 
         <div className="warning" style={{ marginTop: 16 }}>
           Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; internal rate selection, material allowances and selling price are separate approval stages.
         </div>
 
-        <section className="panel" style={{ marginTop: 18 }}>
-          <div className="eyebrow">INTERNAL ASUKA247 COMMERCIAL CONTROL — NOT CLIENT VISIBLE</div>
-          <div className="page-toolbar">
-            <div>
-              <h3>Client rate profile</h3>
-              <p className="muted">Select the commercial profile that applies to the client account. This control is internal and is not included in client reports or portal output.</p>
+        {commercialAccess && (
+          <section className="panel" style={{ marginTop: 18 }}>
+            <div className="eyebrow">INTERNAL ASUKA247 COMMERCIAL CONTROL — AUTHORISED USERS ONLY</div>
+            <div className="page-toolbar">
+              <div>
+                <h3>Client rate profile</h3>
+                <p className="muted">Select the commercial profile that applies to the client account. Internal rates, allowances and selling calculations are excluded from engineer and client views.</p>
+              </div>
+              <label className="inspection-field" style={{ minWidth: 280 }}>
+                Rate profile
+                <select value={rateProfile} onChange={e => setRateProfile(e.target.value as ClientRateProfile)}>
+                  <option value="standard">Standard client rate</option>
+                  <option value="account_package">Account / package-holder rate</option>
+                </select>
+              </label>
             </div>
-            <label className="inspection-field" style={{ minWidth: 280 }}>
-              Rate profile
-              <select value={rateProfile} onChange={e => setRateProfile(e.target.value as ClientRateProfile)}>
-                <option value="standard">Standard client rate</option>
-                <option value="account_package">Account / package-holder rate</option>
-              </select>
-            </label>
-          </div>
 
-          <div className="inspection-progress">
-            <div><span>Labour rate</span><strong>{money(activeRate.hourlyRate)}/hr</strong></div>
-            <div><span>Minimum labour</span><strong>{money(activeRate.minimumCharge)}</strong></div>
-            <div><span>Billing increment</span><strong>{activeRate.billingIncrementMinutes} min</strong></div>
-            <div><span>Commercial profile</span><strong>{rateProfile === "account_package" ? "ACCOUNT" : "STANDARD"}</strong></div>
-          </div>
-
-          <p className="muted">{activeRate.internalNote}</p>
-
-          <div className="inspection-progress" style={{ marginTop: 12 }}>
-            <div><span>Price ready</span><strong>{pricing.readyCount}</strong></div>
-            <div><span>Price review required</span><strong>{pricing.reviewCount}</strong></div>
-            <div><span>Ready-package labour</span><strong>{money(pricing.labour)}</strong></div>
-            <div><span>Ready-package materials</span><strong>{money(pricing.materials)}</strong></div>
-            <div><span>Ready-package total</span><strong>{money(pricing.total)}</strong></div>
-          </div>
-
-          {pricing.reviewCount > 0 && (
-            <div className="warning" style={{ marginTop: 12 }}>
-              ORION is withholding a complete quotation because {pricing.reviewCount} package{pricing.reviewCount === 1 ? "" : "s"} contain unapproved action rates or require technical review. No incomplete package is included in the displayed price-ready total.
+            <div className="inspection-progress">
+              <div><span>Labour rate</span><strong>{money(activeRate.hourlyRate)}/hr</strong></div>
+              <div><span>Minimum labour</span><strong>{money(activeRate.minimumCharge)}</strong></div>
+              <div><span>Billing increment</span><strong>{activeRate.billingIncrementMinutes} min</strong></div>
+              <div><span>Commercial profile</span><strong>{rateProfile === "account_package" ? "ACCOUNT" : "STANDARD"}</strong></div>
             </div>
-          )}
-        </section>
+
+            <p className="muted">{activeRate.internalNote}</p>
+
+            <div className="inspection-progress" style={{ marginTop: 12 }}>
+              <div><span>Price ready</span><strong>{pricing.readyCount}</strong></div>
+              <div><span>Price review required</span><strong>{pricing.reviewCount}</strong></div>
+              <div><span>Ready-package labour</span><strong>{money(pricing.labour)}</strong></div>
+              <div><span>Ready-package materials</span><strong>{money(pricing.materials)}</strong></div>
+              <div><span>Ready-package total</span><strong>{money(pricing.total)}</strong></div>
+            </div>
+
+            {pricing.reviewCount > 0 && (
+              <div className="warning" style={{ marginTop: 12 }}>
+                ORION is withholding a complete quotation because {pricing.reviewCount} package{pricing.reviewCount === 1 ? "" : "s"} contain unapproved action rates or require technical review. No incomplete package is included in the displayed price-ready total.
+              </div>
+            )}
+          </section>
+        )}
+
+        {!commercialAccess && (
+          <div className="panel" style={{ marginTop: 18 }}>
+            <div className="eyebrow">COMMERCIAL INFORMATION RESTRICTED</div>
+            <p className="muted">Internal ASUKA247 rates, account discounts, material allowances and selling calculations require the <strong>{COMMERCIAL_PRICING_PERMISSION}</strong> permission. Technical remedial packages remain available for operational use.</p>
+          </div>
+        )}
 
         {showPackages && packages.length > 0 && (
           <div className="inspection-question-list" style={{ marginTop: 18 }}>
-            {pricing.priced.map(row => {
+            {(commercialAccess ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
               const pkg = row.package;
               return (
                 <section className="panel inspection-question" key={pkg.assetId}>
@@ -170,8 +183,8 @@ export default function Works() {
                       </div>
                       <h3>{pkg.assetName || pkg.assetCode}</h3>
                     </div>
-                    <span className={`inspection-result result-${row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
-                      {row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW"}
+                    <span className={`inspection-result result-${commercialAccess && row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
+                      {commercialAccess ? (row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW") : (pkg.requiresReview ? "TECH REVIEW" : "CONSOLIDATED")}
                     </span>
                   </div>
 
@@ -191,16 +204,20 @@ export default function Works() {
                     )}
                   </div>
 
-                  <div className="inspection-progress" style={{ marginTop: 12 }}>
-                    <div><span>Labour allowance</span><strong>{row.labourMinutes ? `${row.labourMinutes} min` : "Pending"}</strong></div>
-                    <div><span>Materials</span><strong>{row.priceReady ? money(row.materialsCharge) : "Pending"}</strong></div>
-                    <div><span>Internal selling price</span><strong>{row.priceReady ? money(row.totalCharge) : "WITHHELD"}</strong></div>
-                  </div>
+                  {commercialAccess && (
+                    <>
+                      <div className="inspection-progress" style={{ marginTop: 12 }}>
+                        <div><span>Labour allowance</span><strong>{row.labourMinutes ? `${row.labourMinutes} min` : "Pending"}</strong></div>
+                        <div><span>Materials</span><strong>{row.priceReady ? money(row.materialsCharge) : "Pending"}</strong></div>
+                        <div><span>Internal selling price</span><strong>{row.priceReady ? money(row.totalCharge) : "WITHHELD"}</strong></div>
+                      </div>
 
-                  {row.missingRates.length > 0 && (
-                    <div className="warning" style={{ marginTop: 12 }}>
-                      Price review required for: {row.missingRates.join(", ")}.
-                    </div>
+                      {row.missingRates.length > 0 && (
+                        <div className="warning" style={{ marginTop: 12 }}>
+                          Price review required for: {row.missingRates.join(", ")}.
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <div className="inspection-actions">
