@@ -6,6 +6,7 @@ export type AssetType = {
   name: string;
   compliance_domain: string | null;
   inspection_frequency_months: number | null;
+  company_id?: string | null;
 };
 
 export type AssetRow = {
@@ -60,12 +61,19 @@ export type AssetStatusHistory = {
   changed_at: string;
 };
 
-function dedupeAssetTypes(rows: AssetType[]): AssetType[] {
+function dedupeAssetTypes(rows: AssetType[], companyId: string): AssetType[] {
   const byCode = new Map<string, AssetType>();
+
+  // Global catalogue entries are defaults. A tenant-specific entry with the same
+  // controlled code must override the global definition rather than appear twice.
   for (const row of rows) {
     const key = (row.code || row.name).trim().toUpperCase();
-    if (!byCode.has(key)) byCode.set(key, row);
+    const existing = byCode.get(key);
+    if (!existing || (row.company_id === companyId && existing.company_id !== companyId)) {
+      byCode.set(key, row);
+    }
   }
+
   return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -73,12 +81,12 @@ export async function loadAssetTypes(companyId: string): Promise<AssetType[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("asset_types")
-    .select("id,code,name,compliance_domain,inspection_frequency_months")
+    .select("id,code,name,compliance_domain,inspection_frequency_months,company_id")
     .or(`company_id.eq.${companyId},company_id.is.null`)
     .eq("is_active", true)
     .order("name");
   if (error) throw error;
-  return dedupeAssetTypes((data ?? []) as AssetType[]);
+  return dedupeAssetTypes((data ?? []) as AssetType[], companyId);
 }
 
 export async function loadAssets(companyId: string, search = ""): Promise<AssetRow[]> {
