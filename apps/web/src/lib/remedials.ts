@@ -34,23 +34,24 @@ const ACTION_RULES: ActionRule[] = [
   {
     code: "DROP_SEAL",
     label: "Fit or rectify an automatic drop seal / suitable threshold sealing solution",
-    patterns: [/threshold .*exceed/i, /threshold gap/i, /flexible edge/i, /drop seal/i]
+    patterns: [/threshold .*exceed/i, /threshold gap/i, /flexible[- ]edge/i, /drop seal/i]
   },
   {
     code: "REPLACE_SEALS",
     label: "Replace defective, damaged, incomplete, painted-over or incorrectly repaired fire/smoke seals with a compatible continuous system",
     patterns: [
-      /seal .*paint/i,
-      /painted .*seal/i,
-      /seal .*damag/i,
-      /damaged .*seal/i,
-      /seal .*incomplete/i,
-      /incomplete .*seal/i,
-      /missing .*seal/i,
-      /seal .*missing/i,
-      /incorrectly.*seal/i,
-      /seal .*incorrect/i,
-      /seal .*repaired incorrectly/i,
+      /seals? .*paint/i,
+      /painted .*seals?/i,
+      /seals? .*damag/i,
+      /damaged .*seals?/i,
+      /seals? .*incomplete/i,
+      /incomplete .*seals?/i,
+      /missing .*seals?/i,
+      /seals? .*missing/i,
+      /incorrectly.*seals?/i,
+      /seals? .*incorrect/i,
+      /seals? .*repaired incorrectly/i,
+      /seals? .*requires replacement/i,
       /full.?length replacement/i
     ]
   },
@@ -104,7 +105,7 @@ const ACTION_RULES: ActionRule[] = [
   {
     code: "CLEAR_STORAGE",
     label: "Remove stored combustible/obstructive items from the fire-safety cupboard and keep the area clear",
-    patterns: [/storage of/i, /stored in .*cupboard/i, /bike/i, /cardboard/i, /stored materials/i]
+    patterns: [/storage of/i, /storage\/materials/i, /stored in .*cupboard/i, /bike/i, /cardboard/i, /stored materials/i]
   },
   {
     code: "CLOSER",
