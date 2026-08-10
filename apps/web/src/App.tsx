@@ -25,9 +25,10 @@ const router = createBrowserRouter([{
     { path: "properties", element: <Properties /> },
     { path: "assets", element: <Assets /> },
     { path: "assets/scan", element: <AssetScan /> },
-    { path: "assets/:assetId", element: <AssetDetail /> },
-    { path: "assets/:assetId/inspect", element: <AssetInspection /> },
+    // Keep specific asset workflow routes ahead of the generic asset detail route.
     { path: "assets/:assetId/inspect/:inspectionId", element: <AssetInspection /> },
+    { path: "assets/:assetId/inspect", element: <AssetInspection /> },
+    { path: "assets/:assetId", element: <AssetDetail /> },
     { path: "q/:qrToken", element: <AssetQrResolver /> },
     { path: "inspections", element: <Inspections /> },
     { path: "works", element: <Works /> },
