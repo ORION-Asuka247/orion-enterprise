@@ -16,6 +16,8 @@ import {
 } from "../lib/inspection";
 import { useTenant } from "../lib/tenant";
 
+const OTHER_RESPONSE = "Other";
+
 type Draft = {
   responseText: string;
   responseNumber: string;
@@ -27,6 +29,14 @@ type Draft = {
   photoUploaded?: boolean;
   file?: File | null;
 };
+
+function controlledChoices(item: InspectionItem) {
+  const choices = [...(item.choices || [])];
+  if (!choices.some(choice => choice.trim().toLowerCase() === OTHER_RESPONSE.toLowerCase())) {
+    choices.push(OTHER_RESPONSE);
+  }
+  return choices;
+}
 
 export default function AssetInspection() {
   const { assetId, inspectionId } = useParams();
@@ -134,6 +144,11 @@ export default function AssetInspection() {
       notes: ""
     };
 
+    if (item.input_type === "choice" && draft.responseText === OTHER_RESPONSE && !draft.notes.trim()) {
+      setError(`Engineer comment is required when “${OTHER_RESPONSE}” is selected for “${item.prompt}”.`);
+      return;
+    }
+
     setBusyItem(item.id);
     setError("");
 
@@ -146,7 +161,9 @@ export default function AssetInspection() {
           item.input_type === "number" && draft.responseNumber !== ""
             ? Number(draft.responseNumber)
             : null,
-        engineerNotes: draft.notes
+        engineerNotes: draft.responseText === OTHER_RESPONSE
+          ? `[CONTROLLED OTHER — MANUAL REVIEW REQUIRED] ${draft.notes.trim()}`
+          : draft.notes
       });
 
       let photoUploaded = draft.photoUploaded || false;
@@ -269,6 +286,7 @@ export default function AssetInspection() {
             responseNumber: "",
             notes: ""
           };
+          const isOther = item.input_type === "choice" && draft.responseText === OTHER_RESPONSE;
 
           return (
             <section
@@ -304,18 +322,25 @@ export default function AssetInspection() {
               )}
 
               {item.input_type === "choice" && (
-                <div className="inspection-choice-grid">
-                  {(item.choices || []).map(choice => (
-                    <button
-                      type="button"
-                      key={choice}
-                      className={draft.responseText === choice ? "choice-selected" : "secondary"}
-                      onClick={() => setDraft(item.id, { responseText: choice })}
-                    >
-                      {choice}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="inspection-choice-grid">
+                    {controlledChoices(item).map(choice => (
+                      <button
+                        type="button"
+                        key={choice}
+                        className={draft.responseText === choice ? "choice-selected" : "secondary"}
+                        onClick={() => setDraft(item.id, { responseText: choice })}
+                      >
+                        {choice}
+                      </button>
+                    ))}
+                  </div>
+                  {isOther && (
+                    <div className="evidence-alert">
+                      “Other” is outside the controlled answer set. Add an engineer comment below. ORION will retain it for manual technical review and it must not be automatically priced.
+                    </div>
+                  )}
+                </>
               )}
 
               {item.input_type === "text" && (
@@ -329,11 +354,13 @@ export default function AssetInspection() {
               )}
 
               <label className="inspection-field">
-                Engineer observations
+                Engineer observations {isOther ? "(required)" : ""}
                 <textarea
                   value={draft.notes}
                   onChange={e => setDraft(item.id, { notes: e.target.value })}
-                  placeholder="Required where a controlled item fails."
+                  placeholder={isOther
+                    ? "Describe the condition that is not represented by the controlled answers."
+                    : "Required where a controlled item fails."}
                 />
               </label>
 
@@ -381,7 +408,7 @@ export default function AssetInspection() {
                 <button
                   type="button"
                   onClick={() => save(item)}
-                  disabled={busyItem === item.id}
+                  disabled={busyItem === item.id || (isOther && !draft.notes.trim())}
                 >
                   {busyItem === item.id ? "Saving..." : draft.result ? "Update response" : "Save response"}
                 </button>
