@@ -3,12 +3,17 @@ import { Link } from "react-router-dom";
 import Page from "../components/Page";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
 import { consolidateRemedials } from "../lib/remedials";
+import { priceRemedialPackages, RATE_PROFILES, type ClientRateProfile } from "../lib/pricing";
 import { useTenant } from "../lib/tenant";
 
 const statusOrder: OrionDefectStatus[] = ["open", "assigned", "in_progress", "resolved", "verified", "closed", "cancelled"];
 
 function label(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function money(value: number) {
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value);
 }
 
 export default function Works() {
@@ -20,6 +25,7 @@ export default function Works() {
   const [busy, setBusy] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [showPackages, setShowPackages] = useState(true);
+  const [rateProfile, setRateProfile] = useState<ClientRateProfile>("standard");
 
   async function refresh() {
     if (!activeTenant) {
@@ -50,6 +56,8 @@ export default function Works() {
   const packages = useMemo(() => consolidateRemedials(rows), [rows]);
   const packagesNeedingReview = useMemo(() => packages.filter(p => p.requiresReview).length, [packages]);
   const technicalActions = useMemo(() => packages.reduce((sum, p) => sum + p.actions.length, 0), [packages]);
+  const pricing = useMemo(() => priceRemedialPackages(packages, rateProfile), [packages, rateProfile]);
+  const activeRate = RATE_PROFILES[rateProfile];
 
   const visible = useMemo(() => rows.filter(row => {
     if (filter === "all") return true;
@@ -90,7 +98,7 @@ export default function Works() {
             <div className="eyebrow">REMEDIAL CONSOLIDATION ENGINE</div>
             <h2>{packages.length} asset work packages from {counts.active} active defects</h2>
             <p className="muted">
-              ORION groups all active findings by asset, then converts the source findings into one technical repair package per asset. Pricing is deliberately excluded until the technical package has been reviewed.
+              ORION groups all active findings by asset, then converts the source findings into one technical repair package per asset before any commercial calculation is permitted.
             </p>
           </div>
           <button type="button" className="secondary" onClick={() => setShowPackages(v => !v)}>
@@ -102,50 +110,105 @@ export default function Works() {
           <div><span>Packages</span><strong>{packages.length}</strong></div>
           <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
           <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
-          <div><span>Commercial status</span><strong>UNPRICED</strong></div>
+          <div><span>Price-ready packages</span><strong>{pricing.readyCount}</strong></div>
         </div>
 
         <div className="warning" style={{ marginTop: 16 }}>
-          Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; contractor cost, management allowances and selling price are separate approval stages.
+          Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; internal rate selection, material allowances and selling price are separate approval stages.
         </div>
+
+        <section className="panel" style={{ marginTop: 18 }}>
+          <div className="eyebrow">INTERNAL ASUKA247 COMMERCIAL CONTROL — NOT CLIENT VISIBLE</div>
+          <div className="page-toolbar">
+            <div>
+              <h3>Client rate profile</h3>
+              <p className="muted">Select the commercial profile that applies to the client account. This control is internal and is not included in client reports or portal output.</p>
+            </div>
+            <label className="inspection-field" style={{ minWidth: 280 }}>
+              Rate profile
+              <select value={rateProfile} onChange={e => setRateProfile(e.target.value as ClientRateProfile)}>
+                <option value="standard">Standard client rate</option>
+                <option value="account_package">Account / package-holder rate</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="inspection-progress">
+            <div><span>Labour rate</span><strong>{money(activeRate.hourlyRate)}/hr</strong></div>
+            <div><span>Minimum labour</span><strong>{money(activeRate.minimumCharge)}</strong></div>
+            <div><span>Billing increment</span><strong>{activeRate.billingIncrementMinutes} min</strong></div>
+            <div><span>Commercial profile</span><strong>{rateProfile === "account_package" ? "ACCOUNT" : "STANDARD"}</strong></div>
+          </div>
+
+          <p className="muted">{activeRate.internalNote}</p>
+
+          <div className="inspection-progress" style={{ marginTop: 12 }}>
+            <div><span>Price ready</span><strong>{pricing.readyCount}</strong></div>
+            <div><span>Price review required</span><strong>{pricing.reviewCount}</strong></div>
+            <div><span>Ready-package labour</span><strong>{money(pricing.labour)}</strong></div>
+            <div><span>Ready-package materials</span><strong>{money(pricing.materials)}</strong></div>
+            <div><span>Ready-package total</span><strong>{money(pricing.total)}</strong></div>
+          </div>
+
+          {pricing.reviewCount > 0 && (
+            <div className="warning" style={{ marginTop: 12 }}>
+              ORION is withholding a complete quotation because {pricing.reviewCount} package{pricing.reviewCount === 1 ? "" : "s"} contain unapproved action rates or require technical review. No incomplete package is included in the displayed price-ready total.
+            </div>
+          )}
+        </section>
 
         {showPackages && packages.length > 0 && (
           <div className="inspection-question-list" style={{ marginTop: 18 }}>
-            {packages.map(pkg => (
-              <section className="panel inspection-question" key={pkg.assetId}>
-                <div className="inspection-question-header">
-                  <div>
-                    <div className="eyebrow">
-                      {pkg.sourceDoorId || pkg.assetCode} · {pkg.severity.toUpperCase()} · {pkg.defectCodes.length} SOURCE DEFECT{pkg.defectCodes.length === 1 ? "" : "S"}
+            {pricing.priced.map(row => {
+              const pkg = row.package;
+              return (
+                <section className="panel inspection-question" key={pkg.assetId}>
+                  <div className="inspection-question-header">
+                    <div>
+                      <div className="eyebrow">
+                        {pkg.sourceDoorId || pkg.assetCode} · {pkg.severity.toUpperCase()} · {pkg.defectCodes.length} SOURCE DEFECT{pkg.defectCodes.length === 1 ? "" : "S"}
+                      </div>
+                      <h3>{pkg.assetName || pkg.assetCode}</h3>
                     </div>
-                    <h3>{pkg.assetName || pkg.assetCode}</h3>
+                    <span className={`inspection-result result-${row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
+                      {row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW"}
+                    </span>
                   </div>
-                  <span className={`inspection-result result-${pkg.requiresReview ? "fail" : "na"}`}>
-                    {pkg.requiresReview ? "REVIEW" : "CONSOLIDATED"}
-                  </span>
-                </div>
 
-                <div>
-                  <strong>Source findings</strong>
-                  {pkg.findings.map((finding, index) => <p key={`${pkg.assetId}-finding-${index}`}>{finding}</p>)}
-                </div>
+                  <div>
+                    <strong>Source findings</strong>
+                    {pkg.findings.map((finding, index) => <p key={`${pkg.assetId}-finding-${index}`}>{finding}</p>)}
+                  </div>
 
-                <div className="failure-reason">
-                  <strong>Consolidated remedial package</strong>
-                  {pkg.actions.length === 0 ? (
-                    <p>No deterministic remedial rule matched this finding. Competent-person review is required before pricing.</p>
-                  ) : (
-                    <ol>
-                      {pkg.actions.map(action => <li key={`${pkg.assetId}-${action.code}`}>{action.label}</li>)}
-                    </ol>
+                  <div className="failure-reason">
+                    <strong>Consolidated remedial package</strong>
+                    {pkg.actions.length === 0 ? (
+                      <p>No deterministic remedial rule matched this finding. Competent-person review is required before pricing.</p>
+                    ) : (
+                      <ol>
+                        {pkg.actions.map(action => <li key={`${pkg.assetId}-${action.code}`}>{action.label}</li>)}
+                      </ol>
+                    )}
+                  </div>
+
+                  <div className="inspection-progress" style={{ marginTop: 12 }}>
+                    <div><span>Labour allowance</span><strong>{row.labourMinutes ? `${row.labourMinutes} min` : "Pending"}</strong></div>
+                    <div><span>Materials</span><strong>{row.priceReady ? money(row.materialsCharge) : "Pending"}</strong></div>
+                    <div><span>Internal selling price</span><strong>{row.priceReady ? money(row.totalCharge) : "WITHHELD"}</strong></div>
+                  </div>
+
+                  {row.missingRates.length > 0 && (
+                    <div className="warning" style={{ marginTop: 12 }}>
+                      Price review required for: {row.missingRates.join(", ")}.
+                    </div>
                   )}
-                </div>
 
-                <div className="inspection-actions">
-                  <Link className="button-link secondary-link" to={`/assets/${pkg.assetId}`}>Asset record</Link>
-                </div>
-              </section>
-            ))}
+                  <div className="inspection-actions">
+                    <Link className="button-link secondary-link" to={`/assets/${pkg.assetId}`}>Asset record</Link>
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </section>
