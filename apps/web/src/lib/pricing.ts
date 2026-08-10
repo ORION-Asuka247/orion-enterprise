@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 import type { RemedialPackage } from "./remedials";
 
 export type ClientRateProfile = "standard" | "account_package";
@@ -18,6 +19,11 @@ export type ActionRate = {
   internalNote?: string;
 };
 
+export type PricingConfig = {
+  profiles: Partial<Record<ClientRateProfile, LabourRateProfile>>;
+  actions: Record<string, ActionRate>;
+};
+
 export type PricedRemedialPackage = {
   package: RemedialPackage;
   labourMinutes: number;
@@ -29,60 +35,23 @@ export type PricedRemedialPackage = {
   priceReady: boolean;
 };
 
-// INTERNAL ASUKA247 COMMERCIAL CONTROL ONLY.
-// These values are never intended for client-facing reports or portal output.
-export const RATE_PROFILES: Record<ClientRateProfile, LabourRateProfile> = {
-  standard: {
-    code: "standard",
-    label: "Standard client rate",
-    hourlyRate: 150,
-    minimumCharge: 75,
-    billingIncrementMinutes: 30,
-    internalNote: "Normal ASUKA247 commercial labour rate."
-  },
-  account_package: {
-    code: "account_package",
-    label: "Account / package-holder rate",
-    hourlyRate: 135,
-    minimumCharge: 67.5,
-    billingIncrementMinutes: 30,
-    internalNote: "Preferred account/package-holder labour rate. Default is 10% below standard and remains an internal commercial setting."
-  }
-};
-
-// Only rates supported by the existing ASUKA commercial model have been preloaded.
-// Undefined rates must be approved internally before ORION can mark a package PRICE READY.
-export const ACTION_RATE_CARD: Record<string, ActionRate> = {
-  ADJUST_GAPS: {
-    actionCode: "ADJUST_GAPS",
-    labourMinutes: 90,
-    materialsCost: 45,
-    internalNote: "Existing ASUKA general fire-door adjustment allowance."
-  },
-  REPLACE_SEALS: {
-    actionCode: "REPLACE_SEALS",
-    labourMinutes: 60,
-    materialsCost: 35,
-    internalNote: "Existing ASUKA fire/smoke seal allowance."
-  },
-  FD_SIGN: {
-    actionCode: "FD_SIGN",
-    labourMinutes: 30,
-    materialsCost: 18,
-    internalNote: "Existing ASUKA fire-safety sign allowance."
-  },
-  DROP_SEAL: { actionCode: "DROP_SEAL", labourMinutes: null, materialsCost: null },
-  REPLACE_HINGES: { actionCode: "REPLACE_HINGES", labourMinutes: null, materialsCost: null },
-  HINGE_FIXINGS: { actionCode: "HINGE_FIXINGS", labourMinutes: null, materialsCost: null },
-  DOOR_STOP: { actionCode: "DOOR_STOP", labourMinutes: null, materialsCost: null },
-  VISION_PANEL: { actionCode: "VISION_PANEL", labourMinutes: null, materialsCost: null },
-  GLAZING_SEAL: { actionCode: "GLAZING_SEAL", labourMinutes: null, materialsCost: null },
-  LEAF_REPAIR: { actionCode: "LEAF_REPAIR", labourMinutes: null, materialsCost: null },
-  SECURE_THRESHOLD: { actionCode: "SECURE_THRESHOLD", labourMinutes: null, materialsCost: null },
-  CLEAR_STORAGE: { actionCode: "CLEAR_STORAGE", labourMinutes: null, materialsCost: null },
-  CLOSER: { actionCode: "CLOSER", labourMinutes: 60, materialsCost: 85, internalNote: "Existing ASUKA closer allowance." },
-  ASSET_ID: { actionCode: "ASSET_ID", labourMinutes: null, materialsCost: null }
-};
+/**
+ * Loads internal ASUKA commercial rates from a SECURITY DEFINER RPC.
+ * The RPC enforces commercial.pricing.view before returning any values.
+ * Rates are intentionally absent from the public web bundle.
+ */
+export async function loadPricingConfig(companyId: string): Promise<PricingConfig> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { data, error } = await supabase.rpc("commercial_get_pricing_config", {
+    p_company_id: companyId
+  });
+  if (error) throw error;
+  const value = (data ?? {}) as any;
+  return {
+    profiles: value.profiles ?? {},
+    actions: value.actions ?? {}
+  };
+}
 
 function roundCurrency(value: number) {
   return Number(value.toFixed(2));
@@ -90,27 +59,41 @@ function roundCurrency(value: number) {
 
 export function priceRemedialPackage(
   pkg: RemedialPackage,
-  profileCode: ClientRateProfile
+  profileCode: ClientRateProfile,
+  config: PricingConfig
 ): PricedRemedialPackage {
-  const profile = RATE_PROFILES[profileCode];
+  const profile = config.profiles[profileCode];
   const missingRates: string[] = [];
   let labourMinutes = 0;
   let materialsCharge = 0;
 
+  if (!profile) {
+    return {
+      package: pkg,
+      labourMinutes: 0,
+      billedMinutes: 0,
+      labourCharge: 0,
+      materialsCharge: 0,
+      totalCharge: 0,
+      missingRates: ["RATE_PROFILE"],
+      priceReady: false
+    };
+  }
+
   for (const action of pkg.actions) {
-    const rate = ACTION_RATE_CARD[action.code];
+    const rate = config.actions[action.code];
     if (!rate || rate.labourMinutes == null || rate.materialsCost == null) {
       missingRates.push(action.code);
       continue;
     }
-    labourMinutes += rate.labourMinutes;
-    materialsCharge += rate.materialsCost;
+    labourMinutes += Number(rate.labourMinutes);
+    materialsCharge += Number(rate.materialsCost);
   }
 
-  const increment = Math.max(1, profile.billingIncrementMinutes);
+  const increment = Math.max(1, Number(profile.billingIncrementMinutes));
   const billedMinutes = labourMinutes > 0 ? Math.ceil(labourMinutes / increment) * increment : 0;
-  const calculatedLabour = billedMinutes * (profile.hourlyRate / 60);
-  const labourCharge = billedMinutes > 0 ? Math.max(profile.minimumCharge, calculatedLabour) : 0;
+  const calculatedLabour = billedMinutes * (Number(profile.hourlyRate) / 60);
+  const labourCharge = billedMinutes > 0 ? Math.max(Number(profile.minimumCharge), calculatedLabour) : 0;
   const priceReady = !pkg.requiresReview && missingRates.length === 0 && pkg.actions.length > 0;
 
   return {
@@ -125,8 +108,12 @@ export function priceRemedialPackage(
   };
 }
 
-export function priceRemedialPackages(packages: RemedialPackage[], profileCode: ClientRateProfile) {
-  const priced = packages.map(pkg => priceRemedialPackage(pkg, profileCode));
+export function priceRemedialPackages(
+  packages: RemedialPackage[],
+  profileCode: ClientRateProfile,
+  config: PricingConfig
+) {
+  const priced = packages.map(pkg => priceRemedialPackage(pkg, profileCode, config));
   return {
     priced,
     readyCount: priced.filter(row => row.priceReady).length,
