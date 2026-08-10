@@ -1,39 +1,25 @@
-import type { User } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
+
+/** Internal ASUKA247 commercial pricing permission. */
+export const COMMERCIAL_PRICING_PERMISSION = "commercial.pricing.view";
 
 /**
- * Internal ASUKA247 commercial controls.
- *
- * This UI guard deliberately defaults to DENY. It is not a substitute for
- * database RLS: sensitive cost/margin data must also be protected server-side
- * before persistent commercial tables are introduced.
+ * Resolve commercial pricing access from ORION's database RBAC model.
+ * Defaults to DENY on missing configuration, unauthenticated access or errors.
+ * public.has_permission also permits platform administrators.
  */
-const COMMERCIAL_VIEW_ROLES = new Set([
-  "owner",
-  "director",
-  "commercial_admin",
-  "commercial_manager"
-]);
+export async function loadCommercialPricingAccess(companyId: string | null | undefined): Promise<boolean> {
+  if (!supabase || !companyId) return false;
 
-function normalise(value: unknown) {
-  return String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const { data, error } = await supabase.rpc("has_permission", {
+    target_company: companyId,
+    permission_code: COMMERCIAL_PRICING_PERMISSION
+  });
+
+  if (error) {
+    console.error("Unable to resolve commercial pricing permission", error);
+    return false;
+  }
+
+  return data === true;
 }
-
-export function canViewCommercialPricing(user: User | null | undefined): boolean {
-  if (!user) return false;
-
-  const metadata = {
-    ...(user.user_metadata ?? {}),
-    ...(user.app_metadata ?? {})
-  } as Record<string, unknown>;
-
-  const permissions = Array.isArray(metadata.permissions)
-    ? metadata.permissions.map(normalise)
-    : [];
-
-  if (permissions.includes("commercial.pricing.view")) return true;
-
-  const role = normalise(metadata.orion_role ?? metadata.role);
-  return COMMERCIAL_VIEW_ROLES.has(role);
-}
-
-export const COMMERCIAL_PRICING_PERMISSION = "commercial.pricing.view";
