@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Page from "../components/Page";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
 import { consolidateRemedials } from "../lib/remedials";
-import { priceRemedialPackages, RATE_PROFILES, type ClientRateProfile } from "../lib/pricing";
+import { loadPricingConfig, priceRemedialPackages, type ClientRateProfile, type PricingConfig } from "../lib/pricing";
 import { loadCommercialPricingAccess, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
 import { useTenant } from "../lib/tenant";
 
@@ -21,6 +21,7 @@ export default function Works() {
   const { activeTenant } = useTenant();
   const [commercialAccess, setCommercialAccess] = useState(false);
   const [commercialAccessLoading, setCommercialAccessLoading] = useState(true);
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
   const [rows, setRows] = useState<OrionDefect[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,11 +54,28 @@ export default function Works() {
     let cancelled = false;
     async function resolveCommercialAccess() {
       setCommercialAccess(false);
+      setPricingConfig(null);
       setCommercialAccessLoading(true);
-      const allowed = await loadCommercialPricingAccess(activeTenant?.id);
-      if (!cancelled) {
-        setCommercialAccess(allowed);
-        setCommercialAccessLoading(false);
+      const companyId = activeTenant?.id;
+      if (!companyId) {
+        if (!cancelled) setCommercialAccessLoading(false);
+        return;
+      }
+      const allowed = await loadCommercialPricingAccess(companyId);
+      if (!allowed) {
+        if (!cancelled) setCommercialAccessLoading(false);
+        return;
+      }
+      try {
+        const config = await loadPricingConfig(companyId);
+        if (!cancelled) {
+          setCommercialAccess(true);
+          setPricingConfig(config);
+        }
+      } catch (e) {
+        console.error("Unable to load protected commercial rate card", e);
+      } finally {
+        if (!cancelled) setCommercialAccessLoading(false);
       }
     }
     resolveCommercialAccess();
@@ -74,8 +92,11 @@ export default function Works() {
   const packages = useMemo(() => consolidateRemedials(rows), [rows]);
   const packagesNeedingReview = useMemo(() => packages.filter(p => p.requiresReview).length, [packages]);
   const technicalActions = useMemo(() => packages.reduce((sum, p) => sum + p.actions.length, 0), [packages]);
-  const pricing = useMemo(() => priceRemedialPackages(packages, rateProfile), [packages, rateProfile]);
-  const activeRate = RATE_PROFILES[rateProfile];
+  const pricing = useMemo(
+    () => pricingConfig ? priceRemedialPackages(packages, rateProfile, pricingConfig) : null,
+    [packages, rateProfile, pricingConfig]
+  );
+  const activeRate = pricingConfig?.profiles[rateProfile];
 
   const visible = useMemo(() => rows.filter(row => {
     if (filter === "all") return true;
@@ -100,6 +121,8 @@ export default function Works() {
       setBusy("");
     }
   }
+
+  const pricingVisible = commercialAccess && !!pricing && !!activeRate;
 
   return (
     <Page title="Works & remedials" kicker="OPERATIONS">
@@ -128,14 +151,14 @@ export default function Works() {
           <div><span>Packages</span><strong>{packages.length}</strong></div>
           <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
           <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
-          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : commercialAccess ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
+          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : pricingVisible ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
         </div>
 
         <div className="warning" style={{ marginTop: 16 }}>
           Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; internal rate selection, material allowances and selling price are separate approval stages.
         </div>
 
-        {!commercialAccessLoading && commercialAccess && (
+        {!commercialAccessLoading && pricingVisible && (
           <section className="panel" style={{ marginTop: 18 }}>
             <div className="eyebrow">INTERNAL ASUKA247 COMMERCIAL CONTROL — AUTHORISED USERS ONLY</div>
             <div className="page-toolbar">
@@ -153,8 +176,8 @@ export default function Works() {
             </div>
 
             <div className="inspection-progress">
-              <div><span>Labour rate</span><strong>{money(activeRate.hourlyRate)}/hr</strong></div>
-              <div><span>Minimum labour</span><strong>{money(activeRate.minimumCharge)}</strong></div>
+              <div><span>Labour rate</span><strong>{money(Number(activeRate.hourlyRate))}/hr</strong></div>
+              <div><span>Minimum labour</span><strong>{money(Number(activeRate.minimumCharge))}</strong></div>
               <div><span>Billing increment</span><strong>{activeRate.billingIncrementMinutes} min</strong></div>
               <div><span>Commercial profile</span><strong>{rateProfile === "account_package" ? "ACCOUNT" : "STANDARD"}</strong></div>
             </div>
@@ -177,7 +200,7 @@ export default function Works() {
           </section>
         )}
 
-        {!commercialAccessLoading && !commercialAccess && (
+        {!commercialAccessLoading && !pricingVisible && (
           <div className="panel" style={{ marginTop: 18 }}>
             <div className="eyebrow">COMMERCIAL INFORMATION RESTRICTED</div>
             <p className="muted">Internal ASUKA247 rates, account discounts, material allowances and selling calculations require the <strong>{COMMERCIAL_PRICING_PERMISSION}</strong> permission. Technical remedial packages remain available for operational use.</p>
@@ -186,7 +209,7 @@ export default function Works() {
 
         {showPackages && packages.length > 0 && (
           <div className="inspection-question-list" style={{ marginTop: 18 }}>
-            {((!commercialAccessLoading && commercialAccess) ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
+            {(pricingVisible ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
               const pkg = row.package;
               return (
                 <section className="panel inspection-question" key={pkg.assetId}>
@@ -197,8 +220,8 @@ export default function Works() {
                       </div>
                       <h3>{pkg.assetName || pkg.assetCode}</h3>
                     </div>
-                    <span className={`inspection-result result-${!commercialAccessLoading && commercialAccess && row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
-                      {!commercialAccessLoading && commercialAccess ? (row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW") : (pkg.requiresReview ? "TECH REVIEW" : "CONSOLIDATED")}
+                    <span className={`inspection-result result-${pricingVisible && row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
+                      {pricingVisible ? (row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW") : (pkg.requiresReview ? "TECH REVIEW" : "CONSOLIDATED")}
                     </span>
                   </div>
 
@@ -218,7 +241,7 @@ export default function Works() {
                     )}
                   </div>
 
-                  {!commercialAccessLoading && commercialAccess && (
+                  {pricingVisible && (
                     <>
                       <div className="inspection-progress" style={{ marginTop: 12 }}>
                         <div><span>Labour allowance</span><strong>{row.labourMinutes ? `${row.labourMinutes} min` : "Pending"}</strong></div>
