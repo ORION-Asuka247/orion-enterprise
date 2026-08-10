@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Page from "../components/Page";
-import { generateReport, loadReports, loadSubmittedInspections, type ReportRow, type ReportType } from "../lib/reports";
+import {
+  generatePropertyFireDoorReport,
+  generateReport,
+  loadFireDoorReportProperties,
+  loadReports,
+  loadSubmittedInspections,
+  type FireDoorReportProperty,
+  type ReportRow,
+  type ReportType
+} from "../lib/reports";
 import { useTenant } from "../lib/tenant";
 
 export default function Reports() {
@@ -9,10 +18,14 @@ export default function Reports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [inspections, setInspections] = useState<any[]>([]);
+  const [properties, setProperties] = useState<FireDoorReportProperty[]>([]);
   const [selectedInspection, setSelectedInspection] = useState("");
-  const [reportType, setReportType] = useState<ReportType>("inspection_report");
+  const [selectedProperty, setSelectedProperty] = useState("");
+  const [reportType, setReportType] = useState<Exclude<ReportType, "property_fire_door_report">>("inspection_report");
   const [notes, setNotes] = useState("");
+  const [propertyNotes, setPropertyNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [propertyBusy, setPropertyBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -21,13 +34,16 @@ export default function Reports() {
     setLoading(true);
     setError("");
     try {
-      const [r, i] = await Promise.all([
+      const [r, i, p] = await Promise.all([
         loadReports(activeTenant.id),
-        loadSubmittedInspections(activeTenant.id)
+        loadSubmittedInspections(activeTenant.id),
+        loadFireDoorReportProperties(activeTenant.id)
       ]);
       setReports(r);
       setInspections(i);
+      setProperties(p);
       if (!selectedInspection && i[0]?.id) setSelectedInspection(i[0].id);
+      if (!selectedProperty && p[0]?.id) setSelectedProperty(p[0].id);
     } catch (e: any) {
       setError(e?.message || "Unable to load reports.");
     } finally {
@@ -59,6 +75,21 @@ export default function Reports() {
     }
   }
 
+  async function createPropertyFireDoorReport() {
+    if (!selectedProperty) return;
+    setPropertyBusy(true);
+    setError("");
+    try {
+      const id = await generatePropertyFireDoorReport(selectedProperty, propertyNotes);
+      await load();
+      navigate(`/reports/${id}`);
+    } catch (e: any) {
+      setError(e?.message || "Unable to generate property fire door report.");
+    } finally {
+      setPropertyBusy(false);
+    }
+  }
+
   return (
     <Page title="Controlled reports" kicker="DOCUMENT CONTROL">
       <div className="inspection-progress panel">
@@ -71,8 +102,31 @@ export default function Reports() {
       {error && <div className="warning">{error}</div>}
 
       <section className="panel">
+        <div className="eyebrow">PROPERTY FIRE DOOR REPORT</div>
+        <h2>Create one controlled report for a complete fire-door programme</h2>
+        <p>Generates an immutable property snapshot containing every fire-door asset, submitted outcome, active defect, consolidated remedial action and manual-review flag. Internal commercial rates are deliberately excluded from the client report.</p>
+        {properties.length === 0 ? (
+          <div className="placeholder">No active properties are available.</div>
+        ) : (
+          <>
+            <label className="inspection-field">
+              Property
+              <select value={selectedProperty} onChange={e => setSelectedProperty(e.target.value)}>
+                {properties.map(row => <option key={row.id} value={row.id}>{row.name}{row.postcode ? ` · ${row.postcode}` : ""}</option>)}
+              </select>
+            </label>
+            <label className="inspection-field">
+              Version notes
+              <textarea value={propertyNotes} onChange={e => setPropertyNotes(e.target.value)} placeholder="Optional reason for generation or revision." />
+            </label>
+            <button onClick={createPropertyFireDoorReport} disabled={propertyBusy || !selectedProperty}>{propertyBusy ? "Generating..." : "Generate property fire door report"}</button>
+          </>
+        )}
+      </section>
+
+      <section className="panel">
         <div className="eyebrow">GENERATE CONTROLLED DOCUMENT</div>
-        <h2>Create report from submitted inspection</h2>
+        <h2>Create report from one submitted inspection</h2>
         <p>ORION captures an immutable source snapshot each time a new document version is generated.</p>
         {inspections.length === 0 ? (
           <div className="placeholder">No submitted inspections are currently available for reporting.</div>
@@ -90,7 +144,7 @@ export default function Reports() {
             </label>
             <label className="inspection-field">
               Document type
-              <select value={reportType} onChange={e => setReportType(e.target.value as ReportType)}>
+              <select value={reportType} onChange={e => setReportType(e.target.value as Exclude<ReportType, "property_fire_door_report">)}>
                 <option value="inspection_report">Inspection report</option>
                 <option value="fraew_report">F.R.A.E.W. assessment</option>
                 <option value="certificate">Inspection certificate</option>
@@ -109,7 +163,7 @@ export default function Reports() {
         <div className="page-toolbar">
           <div>
             <h2>Document register</h2>
-            <p className="muted">Inspection reports, FRAEW assessments and certificates for {activeTenant?.name || "the active company"}.</p>
+            <p className="muted">Inspection reports, F.R.A.E.W. assessments, certificates and property fire-door reports for {activeTenant?.name || "the active company"}.</p>
           </div>
         </div>
         {loading ? <div className="panel">Loading report register...</div> : reports.length === 0 ? (
@@ -122,7 +176,12 @@ export default function Reports() {
                   <div>
                     <div className="eyebrow">{report.document_number} · Version {report.current_version}</div>
                     <h2>{report.title}</h2>
-                    <p>{report.orion_inspection_runs?.assets?.asset_code || "Asset"} · {(report.report_type || "").replace(/_/g, " ")} · Updated {new Date(report.updated_at).toLocaleString()}</p>
+                    <p>
+                      {report.report_type === "property_fire_door_report"
+                        ? `${report.properties?.name || "Property"}${report.properties?.postcode ? ` · ${report.properties.postcode}` : ""}`
+                        : `${report.orion_inspection_runs?.assets?.asset_code || "Asset"} · ${(report.report_type || "").replace(/_/g, " ")}`}
+                      {` · Updated ${new Date(report.updated_at).toLocaleString()}`}
+                    </p>
                   </div>
                   <span className={`inspection-result ${report.status === "issued" ? "result-pass" : "result-na"}`}>{report.status.toUpperCase()}</span>
                 </div>
