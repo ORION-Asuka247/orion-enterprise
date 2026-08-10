@@ -36,6 +36,46 @@ export type PricedRemedialPackage = {
 };
 
 /**
+ * Door-level production allowances used by ASUKA247 for the current fire-door
+ * remedial workflow. These are deliberately package allowances rather than the
+ * arithmetic sum of every action allowance: access, setup, removal, adjustment
+ * and final testing overlap when several repairs are completed on one door.
+ *
+ * Unknown combinations do NOT receive an invented allowance. They are held for
+ * commercial review via PACKAGE_LABOUR_REVIEW.
+ */
+const PACKAGE_LABOUR_MINUTES: Record<string, number> = {
+  "REPLACE_SEALS": 60,
+  "REPLACE_HINGES": 90,
+  "ADJUST_GAPS|DROP_SEAL": 120,
+  "REPLACE_HINGES|REPLACE_SEALS": 120,
+  "ASSET_ID|REPLACE_SEALS": 60,
+  "HINGE_FIXINGS|REPLACE_SEALS": 75,
+  "DROP_SEAL|REPLACE_HINGES": 120,
+  "ADJUST_GAPS|REPLACE_SEALS": 120,
+  "LEAF_REPAIR|REPLACE_SEALS": 120,
+  "CLEAR_STORAGE|REPLACE_HINGES": 105,
+  "ADJUST_GAPS|DROP_SEAL|REPLACE_SEALS": 150,
+  "DOOR_STOP|HINGE_FIXINGS|REPLACE_SEALS": 120,
+  "FD_SIGN|REPLACE_HINGES|REPLACE_SEALS": 135,
+  "ADJUST_GAPS|DROP_SEAL|HINGE_FIXINGS": 135,
+  "ADJUST_GAPS|DROP_SEAL|GLAZING_SEAL": 165,
+  "CLEAR_STORAGE|REPLACE_HINGES|REPLACE_SEALS|SECURE_THRESHOLD": 165,
+  "ADJUST_GAPS|DROP_SEAL|REPLACE_HINGES|REPLACE_SEALS|SECURE_THRESHOLD": 210,
+  // Hinge replacement includes removal/refitting and correct replacement fixings.
+  "HINGE_FIXINGS|REPLACE_HINGES": 90
+};
+
+function actionSignature(pkg: RemedialPackage) {
+  return pkg.actions.map(action => action.code).sort().join("|");
+}
+
+function consolidatedLabourMinutes(pkg: RemedialPackage): number | null {
+  if (pkg.actions.length === 0) return null;
+  return PACKAGE_LABOUR_MINUTES[actionSignature(pkg)] ?? null;
+}
+
+/**
  * Loads internal ASUKA commercial rates from a SECURITY DEFINER RPC.
  * The RPC enforces commercial.pricing.view before returning any values.
  * Rates are intentionally absent from the public web bundle.
@@ -94,7 +134,6 @@ export function priceRemedialPackage(
 ): PricedRemedialPackage {
   const profile = config.profiles[profileCode];
   const missingRates: string[] = [];
-  let labourMinutes = 0;
   let materialsCharge = 0;
 
   if (!profile) {
@@ -110,14 +149,33 @@ export function priceRemedialPackage(
     };
   }
 
+  let allLabourDefined = true;
   for (const action of pkg.actions) {
     const rate = config.actions[action.code];
-    if (!rate || rate.labourMinutes == null || rate.materialsCost == null) {
-      missingRates.push(action.code);
+    if (!rate) {
+      allLabourDefined = false;
+      missingRates.push(`${action.code}:RATE`);
       continue;
     }
-    labourMinutes += Number(rate.labourMinutes);
-    materialsCharge += Number(rate.materialsCost);
+    if (rate.labourMinutes == null) {
+      allLabourDefined = false;
+      missingRates.push(`${action.code}:LABOUR`);
+    }
+    if (rate.materialsCost == null) {
+      missingRates.push(`${action.code}:MATERIALS`);
+    } else {
+      materialsCharge += Number(rate.materialsCost);
+    }
+  }
+
+  let labourMinutes = 0;
+  if (allLabourDefined && pkg.actions.length > 0) {
+    const consolidated = consolidatedLabourMinutes(pkg);
+    if (consolidated == null) {
+      missingRates.push("PACKAGE_LABOUR_REVIEW");
+    } else {
+      labourMinutes = consolidated;
+    }
   }
 
   const increment = Math.max(1, Number(profile.billingIncrementMinutes));
