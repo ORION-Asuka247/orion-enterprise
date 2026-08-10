@@ -22,14 +22,19 @@ export type OrionDefect = {
   verified_at: string | null;
   created_at: string;
   updated_at: string;
-  assets: { id: string; asset_code: string; name: string | null } | null;
+  assets: {
+    id: string;
+    asset_code: string;
+    name: string | null;
+    metadata?: Record<string, unknown> | null;
+  } | null;
 };
 
 export async function loadDefects(companyId: string): Promise<OrionDefect[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("orion_inspection_defects")
-    .select("id,company_id,asset_id,inspection_id,defect_code,title,description,severity,status,suggested_action,assigned_to,target_date,remedial_notes,resolution_notes,resolved_at,verified_at,created_at,updated_at,assets(id,asset_code,name)")
+    .select("id,company_id,asset_id,inspection_id,defect_code,title,description,severity,status,suggested_action,assigned_to,target_date,remedial_notes,resolution_notes,resolved_at,verified_at,created_at,updated_at,assets(id,asset_code,name,metadata)")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
   if (error) throw error;
