@@ -4,8 +4,7 @@ import Page from "../components/Page";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
 import { consolidateRemedials } from "../lib/remedials";
 import { priceRemedialPackages, RATE_PROFILES, type ClientRateProfile } from "../lib/pricing";
-import { canViewCommercialPricing, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
-import { useAuth } from "../lib/auth";
+import { loadCommercialPricingAccess, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
 import { useTenant } from "../lib/tenant";
 
 const statusOrder: OrionDefectStatus[] = ["open", "assigned", "in_progress", "resolved", "verified", "closed", "cancelled"];
@@ -20,8 +19,8 @@ function money(value: number) {
 
 export default function Works() {
   const { activeTenant } = useTenant();
-  const { user } = useAuth();
-  const commercialAccess = canViewCommercialPricing(user);
+  const [commercialAccess, setCommercialAccess] = useState(false);
+  const [commercialAccessLoading, setCommercialAccessLoading] = useState(true);
   const [rows, setRows] = useState<OrionDefect[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,6 +48,21 @@ export default function Works() {
   }
 
   useEffect(() => { refresh(); }, [activeTenant]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function resolveCommercialAccess() {
+      setCommercialAccess(false);
+      setCommercialAccessLoading(true);
+      const allowed = await loadCommercialPricingAccess(activeTenant?.id);
+      if (!cancelled) {
+        setCommercialAccess(allowed);
+        setCommercialAccessLoading(false);
+      }
+    }
+    resolveCommercialAccess();
+    return () => { cancelled = true; };
+  }, [activeTenant?.id]);
 
   const counts = useMemo(() => ({
     total: rows.length,
@@ -114,14 +128,14 @@ export default function Works() {
           <div><span>Packages</span><strong>{packages.length}</strong></div>
           <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
           <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
-          <div><span>Commercial status</span><strong>{commercialAccess ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
+          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : commercialAccess ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
         </div>
 
         <div className="warning" style={{ marginTop: 16 }}>
           Commercial control: ORION must not derive a quotation from raw defect count. Technical findings are consolidated by asset first; internal rate selection, material allowances and selling price are separate approval stages.
         </div>
 
-        {commercialAccess && (
+        {!commercialAccessLoading && commercialAccess && (
           <section className="panel" style={{ marginTop: 18 }}>
             <div className="eyebrow">INTERNAL ASUKA247 COMMERCIAL CONTROL — AUTHORISED USERS ONLY</div>
             <div className="page-toolbar">
@@ -163,7 +177,7 @@ export default function Works() {
           </section>
         )}
 
-        {!commercialAccess && (
+        {!commercialAccessLoading && !commercialAccess && (
           <div className="panel" style={{ marginTop: 18 }}>
             <div className="eyebrow">COMMERCIAL INFORMATION RESTRICTED</div>
             <p className="muted">Internal ASUKA247 rates, account discounts, material allowances and selling calculations require the <strong>{COMMERCIAL_PRICING_PERMISSION}</strong> permission. Technical remedial packages remain available for operational use.</p>
@@ -172,7 +186,7 @@ export default function Works() {
 
         {showPackages && packages.length > 0 && (
           <div className="inspection-question-list" style={{ marginTop: 18 }}>
-            {(commercialAccess ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
+            {((!commercialAccessLoading && commercialAccess) ? pricing.priced : packages.map(pkg => ({ package: pkg, priceReady: false, labourMinutes: 0, materialsCharge: 0, totalCharge: 0, missingRates: [] as string[] }))).map(row => {
               const pkg = row.package;
               return (
                 <section className="panel inspection-question" key={pkg.assetId}>
@@ -183,8 +197,8 @@ export default function Works() {
                       </div>
                       <h3>{pkg.assetName || pkg.assetCode}</h3>
                     </div>
-                    <span className={`inspection-result result-${commercialAccess && row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
-                      {commercialAccess ? (row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW") : (pkg.requiresReview ? "TECH REVIEW" : "CONSOLIDATED")}
+                    <span className={`inspection-result result-${!commercialAccessLoading && commercialAccess && row.priceReady ? "pass" : pkg.requiresReview ? "fail" : "na"}`}>
+                      {!commercialAccessLoading && commercialAccess ? (row.priceReady ? "PRICE READY" : pkg.requiresReview ? "TECH REVIEW" : "PRICE REVIEW") : (pkg.requiresReview ? "TECH REVIEW" : "CONSOLIDATED")}
                     </span>
                   </div>
 
@@ -204,7 +218,7 @@ export default function Works() {
                     )}
                   </div>
 
-                  {commercialAccess && (
+                  {!commercialAccessLoading && commercialAccess && (
                     <>
                       <div className="inspection-progress" style={{ marginTop: 12 }}>
                         <div><span>Labour allowance</span><strong>{row.labourMinutes ? `${row.labourMinutes} min` : "Pending"}</strong></div>
