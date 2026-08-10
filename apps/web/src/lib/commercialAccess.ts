@@ -17,9 +17,8 @@ function normalise(value: unknown) {
 }
 
 /**
- * Compatibility guard for the current Works screen. Database RBAC is the
- * authoritative control; this synchronous guard remains fail-closed unless
- * the authenticated token explicitly carries an approved role/permission.
+ * Compatibility guard for legacy token metadata only. Database RBAC remains
+ * authoritative for protected commercial information.
  */
 export function canViewCommercialPricing(user: User | null | undefined): boolean {
   if (!user) return false;
@@ -30,8 +29,8 @@ export function canViewCommercialPricing(user: User | null | undefined): boolean
 }
 
 /**
- * Authoritative ORION RBAC check. public.has_permission also permits platform
- * administrators. Defaults to DENY on missing configuration or any error.
+ * Authoritative ORION RBAC check. Defaults to DENY on missing configuration
+ * or any error.
  */
 export async function loadCommercialPricingAccess(companyId: string | null | undefined): Promise<boolean> {
   if (!supabase || !companyId) return false;
@@ -41,6 +40,22 @@ export async function loadCommercialPricingAccess(companyId: string | null | und
   });
   if (error) {
     console.error("Unable to resolve commercial pricing permission", error);
+    return false;
+  }
+  return data === true;
+}
+
+/**
+ * Editing commercial rates is stricter than viewing them: only an active
+ * Company Administrator membership may alter the protected rate card.
+ */
+export async function loadCommercialRateEditAccess(companyId: string | null | undefined): Promise<boolean> {
+  if (!supabase || !companyId) return false;
+  const { data, error } = await supabase.rpc("commercial_is_company_admin", {
+    p_company_id: companyId
+  });
+  if (error) {
+    console.error("Unable to resolve commercial rate edit permission", error);
     return false;
   }
   return data === true;
