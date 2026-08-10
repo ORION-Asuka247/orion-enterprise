@@ -53,6 +53,36 @@ export async function loadPricingConfig(companyId: string): Promise<PricingConfi
   };
 }
 
+/** Company Administrator only. The database function performs the final check. */
+export async function saveRateProfile(companyId: string, profile: LabourRateProfile): Promise<void> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase.rpc("commercial_update_rate_profile", {
+    p_company_id: companyId,
+    p_code: profile.code,
+    p_label: profile.label,
+    p_hourly_rate: Number(profile.hourlyRate),
+    p_minimum_charge: Number(profile.minimumCharge),
+    p_billing_increment_minutes: Number(profile.billingIncrementMinutes),
+    p_internal_note: profile.internalNote || null,
+    p_is_active: true
+  });
+  if (error) throw error;
+}
+
+/** Company Administrator only. Null allowances deliberately keep an action in PRICE REVIEW. */
+export async function saveActionRate(companyId: string, rate: ActionRate): Promise<void> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase.rpc("commercial_update_action_rate", {
+    p_company_id: companyId,
+    p_action_code: rate.actionCode,
+    p_labour_minutes: rate.labourMinutes == null ? null : Number(rate.labourMinutes),
+    p_materials_cost: rate.materialsCost == null ? null : Number(rate.materialsCost),
+    p_internal_note: rate.internalNote || null,
+    p_is_active: true
+  });
+  if (error) throw error;
+}
+
 function roundCurrency(value: number) {
   return Number(value.toFixed(2));
 }
