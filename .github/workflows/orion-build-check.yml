@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Check migration sequence
         run: python3 scripts/check_migrations.py
 
@@ -19,14 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
-          cache: npm
-      - name: Install locked dependencies
-        run: npm ci
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --ignore-scripts
       - name: Build ORION web app
         run: npm run build
 
@@ -34,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Reject browser service-role secrets
         run: |
           if grep -R --line-number --exclude-dir=node_modules --exclude='*.md' 'SUPABASE_SERVICE_ROLE_KEY' apps/web; then
