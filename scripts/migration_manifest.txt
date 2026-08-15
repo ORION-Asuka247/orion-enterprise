@@ -17,3 +17,4 @@
 20260808_017_regulatory_portal_access.sql
 20260808_018_security_hardening.sql
 20260808_019_security_definer_permissions.sql
+20260815_020_release_rls_policies.sql
