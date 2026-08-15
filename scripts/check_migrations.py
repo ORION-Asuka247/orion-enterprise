@@ -1,47 +1,33 @@
 from pathlib import Path
-import re
 import sys
 
-p = Path(__file__).resolve().parents[1] / "supabase/migrations"
-files = sorted(p.glob("*.sql"))
+root = Path(__file__).resolve().parents[1]
+migrations = root / "supabase/migrations"
+manifest = root / "scripts/migration_manifest.txt"
+
+files = sorted(p.name for p in migrations.glob("*.sql"))
+approved = [line.strip() for line in manifest.read_text().splitlines() if line.strip() and not line.lstrip().startswith("#")]
+
 print("Migration count:", len(files))
+print("Approved manifest count:", len(approved))
 
-# ORION permits an optional uppercase revision suffix (for example 012R)
-# when a schema-aligned replacement of a numbered migration is required.
-name_re = re.compile(r"^(\d{8})_(\d{3})([A-Z]?)_(.+)\.sql$")
-entries = []
 bad = False
-seen_names = set()
+if len(approved) != len(set(approved)):
+    print("DUPLICATE ENTRY IN MANIFEST")
+    bad = True
 
-for f in files:
-    m = name_re.match(f.name)
-    if not m:
-        print("INVALID NAME:", f.name)
-        bad = True
-        continue
-    date, seq_text, revision, description = m.groups()
-    key = (int(seq_text), revision)
-    if key in seen_names:
-        print("DUPLICATE MIGRATION KEY:", f.name)
-        bad = True
-    seen_names.add(key)
-    entries.append((int(seq_text), revision, f.name))
+missing = [name for name in approved if name not in files]
+unapproved = [name for name in files if name not in approved]
 
-base_sequences = sorted({seq for seq, revision, _ in entries if revision == ""})
-if base_sequences:
-    expected = list(range(base_sequences[0], base_sequences[-1] + 1))
-    if base_sequences != expected:
-        missing = sorted(set(expected) - set(base_sequences))
-        print("BASE SEQUENCE GAPS:", ", ".join(f"{n:03d}" for n in missing))
-        bad = True
-    if base_sequences[0] != 1:
-        print(f"BASE SEQUENCE MUST START AT 001, found {base_sequences[0]:03d}")
-        bad = True
+for name in missing:
+    print("MISSING APPROVED MIGRATION:", name)
+    bad = True
+for name in unapproved:
+    print("UNAPPROVED MIGRATION:", name)
+    bad = True
 
-for seq, revision, name in entries:
-    if revision and seq not in base_sequences:
-        print(f"ORPHAN REVISION: {name} has no base migration {seq:03d}")
-        bad = True
-    print(f"{seq:03d}{revision or ''} OK  {name}")
+if not bad:
+    for name in approved:
+        print("OK ", name)
 
 sys.exit(1 if bad else 0)
