@@ -1,22 +1,33 @@
 from pathlib import Path
-import re, sys
-p=Path(__file__).resolve().parents[1]/"supabase/migrations"
-files=sorted(p.glob("*.sql"))
-print("Migration count:",len(files))
-seen=set()
-bad=False
-expected=1
-for f in files:
-    m=re.match(r"\d{8}_(\d{3})_",f.name)
-    if not m:
-        print("INVALID NAME:",f.name); bad=True; continue
-    seq=int(m.group(1))
-    if seq in seen:
-        print("DUPLICATE SEQUENCE:",f.name); bad=True
-    if seq != expected:
-        print(f"SEQUENCE GAP: expected {expected:03d}, found {seq:03d} in {f.name}"); bad=True
-        expected=seq
-    seen.add(seq)
-    expected += 1
-    print(f"{seq:03d} OK  {f.name}")
+import sys
+
+root = Path(__file__).resolve().parents[1]
+migrations = root / "supabase/migrations"
+manifest = root / "scripts/migration_manifest.txt"
+
+files = sorted(p.name for p in migrations.glob("*.sql"))
+approved = [line.strip() for line in manifest.read_text().splitlines() if line.strip() and not line.lstrip().startswith("#")]
+
+print("Migration count:", len(files))
+print("Approved manifest count:", len(approved))
+
+bad = False
+if len(approved) != len(set(approved)):
+    print("DUPLICATE ENTRY IN MANIFEST")
+    bad = True
+
+missing = [name for name in approved if name not in files]
+unapproved = [name for name in files if name not in approved]
+
+for name in missing:
+    print("MISSING APPROVED MIGRATION:", name)
+    bad = True
+for name in unapproved:
+    print("UNAPPROVED MIGRATION:", name)
+    bad = True
+
+if not bad:
+    for name in approved:
+        print("OK ", name)
+
 sys.exit(1 if bad else 0)
