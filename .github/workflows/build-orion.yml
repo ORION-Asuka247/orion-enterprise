@@ -1,0 +1,33 @@
+name: Build ORION for Hostinger
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Build frontend
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+      - name: Add SPA fallback
+        run: |
+          printf '%s\n' '<IfModule mod_rewrite.c>' 'RewriteEngine On' 'RewriteBase /' 'RewriteRule ^index\\.html$ - [L]' 'RewriteCond %{REQUEST_FILENAME} !-f' 'RewriteCond %{REQUEST_FILENAME} !-d' 'RewriteRule . /index.html [L]' '</IfModule>' > apps/web/dist/.htaccess
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orion-hostinger-dist
+          path: apps/web/dist/
+          include-hidden-files: true
+          if-no-files-found: error
