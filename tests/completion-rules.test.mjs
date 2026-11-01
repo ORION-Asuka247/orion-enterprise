@@ -19,3 +19,13 @@ test('Requires useful notes and limits payload length', () => {
   for (const n of ['', '          ', 'Done', 'x'.repeat(4001)]) assert.throws(() => validateCompletion(n, [photo(), photo()]));
   assert.doesNotThrow(() => validateCompletion('x'.repeat(4000), [photo(), photo('image/webp', 10485760)]));
 });
+
+const tenantSource = readFileSync(new URL('../apps/web/src/lib/tenantSelection.ts', import.meta.url), 'utf8');
+const tenantJs = ts.transpileModule(tenantSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText;
+const { resolveTenant } = await import('data:text/javascript;base64,' + Buffer.from(tenantJs).toString('base64'));
+test('Restores a selected workspace only while membership is valid', () => {
+  const allowed = [{id:'company-a'}, {id:'test-workspace'}];
+  assert.equal(resolveTenant(allowed, 'test-workspace').id, 'test-workspace');
+  assert.equal(resolveTenant(allowed, 'revoked-workspace').id, 'company-a');
+  assert.equal(resolveTenant([], 'test-workspace'), null);
+});
