@@ -73,7 +73,19 @@ export function createHandler(config:Config,request:Fetch=fetch) {
       runId=await begin.json();
       if(typeof runId!=='string' || !/^[0-9a-f-]{36}$/i.test(runId)) throw new Error('invalid_run_id');
       const result=await request('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${config.openaiKey}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,store:false,max_output_tokens:1200,reasoning:{effort:'none'},instructions:'You are the ASUKA247 ORION portfolio assistant. Use ONLY the supplied aggregate counts. Recommend up to five practical priorities with a basis metric. Be concise. Do not invent dates, addresses, costs, legal requirements, diagnoses or completed work. Do not claim an asset or portfolio is compliant. Explain missing information and human review needs. You cannot change records, approve work, issue certificates or send messages. This is advisory analysis, not a fire safety assessment.',input:JSON.stringify(metrics),text:{format:{type:'json_schema',name:'orion_portfolio_briefing',strict:true,schema}}}),signal:AbortSignal.timeout(45000)});
-      if(!result.ok) throw new Error('provider_rejected');
+      if(!result.ok) {
+        // Classify only known codes; never persist or return upstream text or credentials.
+        const failure=await result.json().catch(()=>({}));
+        const providerCode=failure?.error?.code || failure?.error?.type;
+        const safeCodes=['insufficient_quota','invalid_api_key','rate_limit_exceeded','model_not_found','invalid_request_error','billing_hard_limit_reached','access_terminated','permission_denied'];
+        console.warn('ORION provider rejection',JSON.stringify({status:result.status,code:safeCodes.includes(providerCode)?providerCode:'unclassified'}));
+        const code=providerCode==='insufficient_quota'?'provider_quota_exhausted':
+          result.status===401?'provider_authentication_failed':
+          providerCode==='rate_limit_exceeded'?'provider_rate_limited':
+          result.status===403 || providerCode==='model_not_found'?'provider_access_denied':
+          result.status===400?'provider_invalid_request':'provider_rejected';
+        throw new Error(code);
+      }
       const provider=await result.json(); usage=usageRecord(provider.usage);
       if(provider.status!=='completed') throw new Error('provider_incomplete');
       const text=(provider.output||[]).filter((i:any)=>i.type==='message').flatMap((i:any)=>i.content||[]).filter((i:any)=>i.type==='output_text').map((i:any)=>i.text).join('');
@@ -82,10 +94,11 @@ export function createHandler(config:Config,request:Fetch=fetch) {
       await finish({status:'completed',result:value});
       return reply({run_id:runId,result:value,metrics,...usage,duration_ms:Date.now()-start,model:MODEL});
     } catch(e) {
-      const allowed=['provider_rejected','provider_incomplete','invalid_model_output','audit_write_failed','invalid_metrics'];
+      const allowed=['provider_rejected','provider_quota_exhausted','provider_authentication_failed','provider_rate_limited','provider_access_denied','provider_invalid_request','provider_incomplete','invalid_model_output','audit_write_failed','invalid_metrics'];
       const code=e instanceof Error && allowed.includes(e.message)?e.message:'request_failed';
       if(runId) try{await finish({status:'failed',error_code:code});}catch{console.error('ORION AI audit finalisation failed',runId);}
-      return reply({error:'Analysis could not be completed. No operational records were changed.',code,run_id:runId},502);
+      const messages:Record<string,string>={provider_quota_exhausted:'OpenAI API credits or billing quota are exhausted. Check the API project billing and limits.',provider_authentication_failed:'OpenAI rejected the API key. Check the server-side key configuration.',provider_rate_limited:'OpenAI is rate limiting requests. Wait before trying again.',provider_access_denied:'The OpenAI API project lacks permission for the configured model.',provider_invalid_request:'OpenAI rejected the request format. The integration requires review.'};
+      return reply({error:(messages[code]||'Analysis could not be completed.')+' No operational records were changed.',code,run_id:runId},502);
     }
   };
 }

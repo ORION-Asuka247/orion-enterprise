@@ -136,7 +136,9 @@ export function priceRemedialPackage(
   const missingRates: string[] = [];
   let materialsCharge = 0;
 
-  if (!profile) {
+  const validAmount = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value >= 0;
+  if (!profile || !validAmount(profile.hourlyRate) || profile.hourlyRate <= 0 ||
+      !validAmount(profile.minimumCharge) || !Number.isSafeInteger(profile.billingIncrementMinutes) || profile.billingIncrementMinutes < 1) {
     return {
       package: pkg,
       labourMinutes: 0,
@@ -157,11 +159,11 @@ export function priceRemedialPackage(
       missingRates.push(`${action.code}:RATE`);
       continue;
     }
-    if (rate.labourMinutes == null) {
+    if (!validAmount(rate.labourMinutes)) {
       allLabourDefined = false;
       missingRates.push(`${action.code}:LABOUR`);
     }
-    if (rate.materialsCost == null) {
+    if (!validAmount(rate.materialsCost)) {
       missingRates.push(`${action.code}:MATERIALS`);
     } else {
       materialsCharge += Number(rate.materialsCost);

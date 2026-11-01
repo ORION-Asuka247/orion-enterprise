@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Page from "../components/Page";
 import { useTenant } from "../lib/tenant";
@@ -22,6 +22,8 @@ export default function Assets() {
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const requestVersion = useRef(0);
 
   const [propertyId, setPropertyId] = useState("");
   const [blockId, setBlockId] = useState("");
@@ -37,7 +39,8 @@ export default function Assets() {
 
   async function refresh(q = search) {
     if (!activeTenant) return;
-
+    const version = ++requestVersion.current;
+    setLoading(true);
     setError("");
 
     try {
@@ -46,17 +49,20 @@ export default function Assets() {
         loadAssetTypes(activeTenant.id),
         loadPropertyHierarchy(activeTenant.id)
       ]);
-
+      if (version !== requestVersion.current) return;
       setAssets(a);
       setTypes(t);
       setProperties(p);
     } catch (e: any) {
-      setError(e?.message ?? "Unable to load asset register.");
+      if (version === requestVersion.current) setError(e?.message ?? "Unable to load asset register.");
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
     }
   }
 
   useEffect(() => {
     refresh("");
+    return () => { requestVersion.current++; };
   }, [activeTenant]);
 
   const selectedProperty = useMemo(
@@ -266,9 +272,10 @@ export default function Assets() {
           <span>QR ID</span>
         </div>
 
-        {assets.length === 0 && <div className="empty-inline">No assets registered.</div>}
+        {loading && <div className="empty-inline" role="status">Loading assets…</div>}
+        {!loading && !error && assets.length === 0 && <div className="empty-inline">No assets match this search.</div>}
 
-        {assets.map(asset => (
+        {!loading && assets.map(asset => (
           <Link className="asset-row asset-row-link" to={`/assets/${asset.id}`} key={asset.id}>
             <span>
               <strong>{asset.asset_code}</strong>

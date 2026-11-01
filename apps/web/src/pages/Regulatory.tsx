@@ -66,7 +66,7 @@ export default function Regulatory() {
   }), [sources, changes]);
 
   return (
-    <Page title="Regulatory intelligence" kicker="LIVE COMPLIANCE">
+    <Page title="Regulatory intelligence" kicker="REGULATORY SOURCE REGISTER">
       <div className="inspection-progress panel">
         <div><span>Enabled sources</span><strong>{metrics.enabled}</strong></div>
         <div><span>Healthy sources</span><strong>{metrics.healthy}</strong></div>
@@ -76,6 +76,7 @@ export default function Regulatory() {
 
       {error && <div className="warning">{error}</div>}
       {loading && <div className="panel">Loading regulatory intelligence...</div>}
+      {!loading && !error && metrics.enabled === 0 && <div className="warning">Automatic regulatory monitoring is not active. Approved sources, scheduled collection and human review must be commissioned before this service can be relied on.</div>}
 
       {!loading && (
         <div className="grid two">

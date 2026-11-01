@@ -16,15 +16,23 @@ export default function Dashboard() {
   const { activeTenant } = useTenant();
   const [metrics, setMetrics] = useState<DashboardMetrics>(zero);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let current = true;
+    setMetrics(zero); setError(""); setLoading(true);
     if (!activeTenant) return;
     loadDashboardMetrics(activeTenant.id)
-      .then(setMetrics)
-      .catch((e) => setError(e?.message ?? "Unable to load dashboard."));
+      .then(value => { if (current) setMetrics(value); })
+      .catch((e) => { if (current) setError(e?.message ?? "Unable to load dashboard."); })
+      .finally(() => { if (current) setLoading(false); });
+    return () => { current = false; };
   }, [activeTenant]);
 
   const commissioned = metrics.propertyCount > 0;
+
+  if (loading) return <Page title="Portfolio command centre" kicker="OVERVIEW"><div className="panel" role="status">Loading portfolio…</div></Page>;
+  if (error) return <Page title="Portfolio command centre" kicker="OVERVIEW"><div className="warning" role="alert">{error}</div></Page>;
 
   return (
     <Page title="Portfolio command centre" kicker="OVERVIEW">

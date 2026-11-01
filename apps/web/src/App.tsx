@@ -1,20 +1,21 @@
+import { lazy } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Shell from "./components/Shell";
-import Dashboard from "./pages/Dashboard";
-import Properties from "./pages/Properties";
-import Assets from "./pages/Assets";
-import AssetDetail from "./pages/AssetDetail";
-import AssetScan from "./pages/AssetScan";
-import AssetQrResolver from "./pages/AssetQrResolver";
-import AssetInspection from "./pages/AssetInspection";
-import Inspections from "./pages/Inspections";
-import Works from "./pages/Works";
-import Reports from "./pages/Reports";
-import ReportDetail from "./pages/ReportDetail";
-import Regulatory from "./pages/Regulatory";
-import Intelligence from "./pages/Intelligence";
-import Portal from "./pages/Portal";
-import Setup from "./pages/Setup";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Properties = lazy(() => import("./pages/Properties"));
+const Assets = lazy(() => import("./pages/Assets"));
+const AssetDetail = lazy(() => import("./pages/AssetDetail"));
+const AssetScan = lazy(() => import("./pages/AssetScan"));
+const AssetQrResolver = lazy(() => import("./pages/AssetQrResolver"));
+const AssetInspection = lazy(() => import("./pages/AssetInspection"));
+const Inspections = lazy(() => import("./pages/Inspections"));
+const Works = lazy(() => import("./pages/Works"));
+const Reports = lazy(() => import("./pages/Reports"));
+const ReportDetail = lazy(() => import("./pages/ReportDetail"));
+const Regulatory = lazy(() => import("./pages/Regulatory"));
+const Intelligence = lazy(() => import("./pages/Intelligence"));
+const Portal = lazy(() => import("./pages/Portal"));
+const Setup = lazy(() => import("./pages/Setup"));
 
 const router = createBrowserRouter([{
   path: "/",

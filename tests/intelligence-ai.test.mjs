@@ -17,7 +17,7 @@ function fixture(options={}) {
   if(url.endsWith('/auth/v1/user'))return Response.json({id:user},{status:options.unauthorized?401:200});
   if(url.endsWith('/rpc/orion_intelligence_context'))return Response.json(metrics,{status:options.forbidden?403:200});
   if(url.endsWith('/rpc/orion_ai_begin_run'))return options.limit?Response.json({message:'Daily AI request limit reached'},{status:400}):Response.json(run);
-  if(url==='https://api.openai.com/v1/responses')return options.providerFails?Response.json({error:'private upstream detail'},{status:429}):Response.json({status:'completed',usage:{input_tokens:1000,output_tokens:100,input_tokens_details:{cached_tokens:200}},output:[{type:'message',content:[{type:'output_text',text:options.badOutput?'not-json':JSON.stringify(briefing)}]}]});
+  if(url==='https://api.openai.com/v1/responses')return options.providerError?Response.json({error:{code:options.providerError,message:'private upstream detail'}},{status:options.providerStatus||429}):options.providerFails?Response.json({error:'private upstream detail'},{status:429}):Response.json({status:'completed',usage:{input_tokens:1000,output_tokens:100,input_tokens_details:{cached_tokens:200}},output:[{type:'message',content:[{type:'output_text',text:options.badOutput?'not-json':JSON.stringify(briefing)}]}]});
   if(url.includes('/rest/v1/orion_ai_runs?')){audits.push(JSON.parse(init.body));return Response.json([{id:run}]);}
   throw new Error('Unexpected network call');
  };
@@ -51,6 +51,12 @@ test('Provider failure is audited without returning private upstream detail',asy
 });
 test('Malformed model output is rejected while billable usage is retained',async()=>{
  const f=fixture({badOutput:true});assert.equal((await f.handler(req())).status,502);assert.equal(f.audits[0].status,'failed');assert.equal(f.audits[0].input_tokens,1000);assert.equal(f.audits[0].error_code,'invalid_model_output');
+});
+test('Provider quota, authentication, rate and access failures stay distinct without exposing upstream text',async()=>{
+ for(const [providerError,providerStatus,code] of [['insufficient_quota',429,'provider_quota_exhausted'],['invalid_api_key',401,'provider_authentication_failed'],['rate_limit_exceeded',429,'provider_rate_limited'],['model_not_found',404,'provider_access_denied'],['invalid_parameter',400,'provider_invalid_request']]){
+  const f=fixture({providerError,providerStatus});const r=await f.handler(req());const b=await r.json();
+  assert.equal(r.status,502);assert.equal(b.code,code);assert.equal(f.audits[0].error_code,code);assert.ok(!JSON.stringify(b).includes('private upstream detail'));assert.equal(f.calls.filter(c=>c.url==='https://api.openai.com/v1/responses').length,1);
+ }
 });
 test('Unknown origins, invalid workspace IDs and untrusted context fields cannot reach the provider',async()=>{
  const f=fixture();assert.equal((await f.handler(req(undefined,{Origin:'https://untrusted.invalid'}))).status,403);assert.equal(f.calls.length,0);

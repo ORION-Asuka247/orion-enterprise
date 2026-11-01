@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Suspense } from "react";
 import { useAuth } from "../lib/auth";
 import { useTenant } from "../lib/tenant";
 
@@ -16,7 +17,11 @@ const nav = [
 
 export default function Shell() {
   const { signOut } = useAuth();
-  const { tenants, activeTenant, setActiveTenant } = useTenant();
+  const { tenants, activeTenant, loading, error, setActiveTenant } = useTenant();
+  const { pathname } = useLocation();
+  const customer = activeTenant?.isCustomer === true;
+  const availableNav = customer ? nav.filter(([to]) => to === "/portal" || to === "/reports") : nav;
+  const customerRoute = pathname === "/portal" || pathname === "/reports" || pathname.startsWith("/reports/");
 
   return <div className="app-shell">
     <aside>
@@ -31,6 +36,7 @@ export default function Shell() {
       {tenants.length > 0 && (
         <select
           className="tenant-select"
+          aria-label="Workspace"
           value={activeTenant?.id ?? ""}
           onChange={(e) => {
             const tenant = tenants.find(t => t.id === e.target.value);
@@ -41,7 +47,7 @@ export default function Shell() {
         </select>
       )}
 
-      <nav>{nav.map(([to, label]) =>
+      <nav>{availableNav.map(([to, label]) =>
         <NavLink key={to} to={to} end={to === "/"}>{label}</NavLink>
       )}</nav>
 
@@ -56,7 +62,12 @@ export default function Shell() {
         </div>
         <div className="pill">Review build</div>
       </header>
-      <section className="content"><Outlet /></section>
+      <section className="content">
+        {loading ? <div className="panel" role="status">Loading workspace…</div> :
+          error ? <div className="warning" role="alert">{error}</div> :
+          activeTenant ? customer && !customerRoute ? <Navigate to="/portal" replace /> : <div key={`${activeTenant.id}:${pathname}`}><Suspense fallback={<div className="panel" role="status">Loading page…</div>}><Outlet /></Suspense></div> :
+          <div className="panel">Your account has no active workspace. Please contact ASUKA247 to arrange access.</div>}
+      </section>
     </main>
   </div>;
 }

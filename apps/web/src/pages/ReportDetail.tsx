@@ -153,7 +153,8 @@ export default function ReportDetail() {
   const defects = Array.isArray(s.defects) ? s.defects : [];
   const evidence = Array.isArray(s.evidence) ? s.evidence : [];
   const completions = Array.isArray(s.completions) ? s.completions : [];
-  const isDummy = /^QA-|^DUMMY-/i.test(String(asset.asset_code || "")) || String(selected.notes || "").includes("ORION DUMMY RUN");
+  const isDummy = /^QA-|^DUMMY-/i.test(String(asset.asset_code || property.reference_code || "")) ||
+    /ORION DUMMY RUN|TEST ONLY|SIMULATED QA/i.test([selected.notes,property.name,asset.name].join(" "));
 
   return (
     <Page title={report.title} kicker="CONTROLLED REPORT">
