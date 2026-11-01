@@ -1,3 +1,4 @@
+import { inspectionPassRate } from "../lib/launchRules";
 import { useEffect, useMemo, useState } from "react";
 import Page from "../components/Page";
 import { supabase } from "../lib/supabase";
@@ -8,6 +9,8 @@ type Metrics = {
   assets: number;
   inspections: number;
   failedInspections: number;
+  passedInspections: number;
+  pendingInspections: number;
   openDefects: number;
   criticalDefects: number;
   reports: number;
@@ -19,6 +22,8 @@ const zero: Metrics = {
   assets: 0,
   inspections: 0,
   failedInspections: 0,
+  passedInspections: 0,
+  pendingInspections: 0,
   openDefects: 0,
   criticalDefects: 0,
   reports: 0,
@@ -41,23 +46,26 @@ export default function Intelligence() {
       setLoading(true);
       setError("");
       const id = activeTenant.id;
-      const [properties, assets, inspections, failed, defects, critical, reports, issued] = await Promise.all([
+      const [properties, assets, passed, failed, pending, defects, critical, reports, issued] = await Promise.all([
         supabase.from("properties").select("id", { count: "exact", head: true }).eq("company_id", id),
         supabase.from("assets").select("id", { count: "exact", head: true }).eq("company_id", id),
-        supabase.from("orion_inspection_runs").select("id", { count: "exact", head: true }).eq("company_id", id),
-        supabase.from("orion_inspection_runs").select("id", { count: "exact", head: true }).eq("company_id", id).eq("outcome", "fail"),
+        supabase.from("orion_inspection_runs").select("id", {count:"exact",head:true}).eq("company_id", id).eq("status", "submitted").eq("outcome", "pass"),
+        supabase.from("orion_inspection_runs").select("id", {count:"exact",head:true}).eq("company_id", id).eq("status", "submitted").eq("outcome", "fail"),
+        supabase.from("orion_inspection_runs").select("id", {count:"exact",head:true}).eq("company_id", id).eq("status", "in_progress"),
         supabase.from("orion_inspection_defects").select("id", { count: "exact", head: true }).eq("company_id", id).not("status", "in", "(closed,verified)"),
         supabase.from("orion_inspection_defects").select("id", { count: "exact", head: true }).eq("company_id", id).eq("severity", "critical").not("status", "in", "(closed,verified)"),
         supabase.from("orion_reports").select("id", { count: "exact", head: true }).eq("company_id", id),
         supabase.from("orion_reports").select("id", { count: "exact", head: true }).eq("company_id", id).eq("status", "issued")
       ]);
-      const firstError = [properties, assets, inspections, failed, defects, critical, reports, issued].find(r => r.error)?.error;
+      const firstError = [properties, assets, passed, failed, pending, defects, critical, reports, issued].find(r => r.error)?.error;
       if (firstError) setError(firstError.message);
       setMetrics({
         properties: properties.count ?? 0,
         assets: assets.count ?? 0,
-        inspections: inspections.count ?? 0,
+        inspections: (passed.count ?? 0) + (failed.count ?? 0),
         failedInspections: failed.count ?? 0,
+        passedInspections: passed.count ?? 0,
+        pendingInspections: pending.count ?? 0,
         openDefects: defects.count ?? 0,
         criticalDefects: critical.count ?? 0,
         reports: reports.count ?? 0,
@@ -91,7 +99,7 @@ export default function Intelligence() {
     };
   }, [metrics]);
 
-  const passRate = metrics.inspections === 0 ? 0 : Math.round(((metrics.inspections - metrics.failedInspections) / metrics.inspections) * 100);
+  const passRate = inspectionPassRate(metrics.passedInspections, metrics.failedInspections);
 
   return (
     <Page title="Enterprise intelligence" kicker="PORTFOLIO ANALYTICS">
@@ -122,7 +130,8 @@ export default function Intelligence() {
               <h2>Evidence base</h2>
               <p>This view is calculated from live ORION records rather than speculative AI output. It provides a dependable operational baseline for later assisted analysis.</p>
               <ul className="clean">
-                <li><b>{metrics.inspections}</b><span>Inspection records</span></li>
+                <li><b>{metrics.inspections}</b><span>Submitted inspection outcomes</span></li>
+                <li><b>{metrics.pendingInspections}</b><span>Inspections in progress (excluded from pass rate)</span></li>
                 <li><b>{metrics.reports}</b><span>Controlled report records</span></li>
                 <li><b>{metrics.assets}</b><span>Registered assets</span></li>
               </ul>

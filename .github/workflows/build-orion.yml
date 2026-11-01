@@ -14,15 +14,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-package-lock
+      - run: npm ci --ignore-scripts
       - name: Build frontend
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_APP_BASE_PATH: /app/
         run: npm run build
-      - name: Add SPA fallback
-        run: |
-          printf '%s\n' '<IfModule mod_rewrite.c>' 'RewriteEngine On' 'RewriteBase /' 'RewriteRule ^index\\.html$ - [L]' 'RewriteCond %{REQUEST_FILENAME} !-f' 'RewriteCond %{REQUEST_FILENAME} !-d' 'RewriteRule . /index.html [L]' '</IfModule>' > apps/web/dist/.htaccess
+      - name: Verify subdirectory release
+        run: test -f apps/web/dist/.htaccess && grep -q '/app/assets/' apps/web/dist/index.html
       - uses: actions/upload-artifact@v4
         with:
           name: orion-hostinger-dist

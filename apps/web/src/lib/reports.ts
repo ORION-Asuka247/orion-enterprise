@@ -4,6 +4,7 @@ export type ReportType = "inspection_report" | "fraew_report" | "certificate" | 
 
 export type ReportRow = {
   id: string;
+  company_id: string;
   inspection_id: string | null;
   property_id?: string | null;
   document_number: string;
@@ -42,7 +43,7 @@ export async function loadReports(companyId: string): Promise<ReportRow[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("orion_reports")
-    .select("id,inspection_id,property_id,document_number,report_type,title,status,current_version,created_at,updated_at,issued_at,orion_inspection_runs(asset_id,outcome,submitted_at,assets(asset_code,name)),properties(name,postcode)")
+    .select("id,company_id,inspection_id,property_id,document_number,report_type,title,status,current_version,created_at,updated_at,issued_at,orion_inspection_runs(asset_id,outcome,submitted_at,assets(asset_code,name)),properties(name,postcode)")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -98,7 +99,7 @@ export async function loadReport(reportId: string): Promise<ReportRow> {
   if (!supabase) throw new Error("Supabase is not configured.");
   const { data, error } = await supabase
     .from("orion_reports")
-    .select("id,inspection_id,property_id,document_number,report_type,title,status,current_version,created_at,updated_at,issued_at,orion_inspection_runs(asset_id,outcome,submitted_at,assets(asset_code,name)),properties(name,postcode)")
+    .select("id,company_id,inspection_id,property_id,document_number,report_type,title,status,current_version,created_at,updated_at,issued_at,orion_inspection_runs(asset_id,outcome,submitted_at,assets(asset_code,name)),properties(name,postcode)")
     .eq("id", reportId)
     .single();
   if (error) throw error;
