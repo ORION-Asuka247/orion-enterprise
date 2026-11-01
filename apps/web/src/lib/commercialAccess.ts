@@ -22,7 +22,7 @@ function normalise(value: unknown) {
  */
 export function canViewCommercialPricing(user: User | null | undefined): boolean {
   if (!user) return false;
-  const metadata = { ...(user.user_metadata ?? {}), ...(user.app_metadata ?? {}) } as Record<string, unknown>;
+  const metadata = { ...(user.app_metadata ?? {}) } as Record<string, unknown>;
   const permissions = Array.isArray(metadata.permissions) ? metadata.permissions.map(normalise) : [];
   if (permissions.includes(COMMERCIAL_PRICING_PERMISSION)) return true;
   return COMMERCIAL_VIEW_ROLES.has(normalise(metadata.orion_role ?? metadata.role));

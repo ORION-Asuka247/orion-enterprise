@@ -139,6 +139,14 @@ export async function uploadInspectionEvidence(input: {
 }) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required.");
+  if (!["image/jpeg", "image/png", "image/webp"].includes(input.file.type)) {
+    throw new Error("Use a JPEG, PNG or WebP photograph.");
+  }
+  if (!input.file.size || input.file.size > 10 * 1024 * 1024) {
+    throw new Error("Each photograph must be between 1 byte and 10 MB.");
+  }
   const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${input.companyId}/${input.inspectionId}/${uniqueToken()}-${safeName}`;
 
@@ -157,12 +165,6 @@ export async function uploadInspectionEvidence(input: {
     );
   }
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("Authentication required.");
-
   const { data, error } = await supabase
     .from("orion_inspection_evidence")
     .insert({
@@ -179,7 +181,11 @@ export async function uploadInspectionEvidence(input: {
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // Remove only the new object if its evidence record could not be saved.
+    await supabase.storage.from("inspection-evidence").remove([path]);
+    throw error;
+  }
   return data.id as string;
 }
 
@@ -219,6 +225,14 @@ export async function loadNewInspectionDefects(companyId: string, assetId: strin
     .eq("asset_id", assetId)
     .order("created_at", { ascending: false });
 
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function loadInspectionEvidence(inspectionId: string) {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("orion_inspection_evidence")
+    .select("id,answer_id,file_name").eq("inspection_id", inspectionId);
   if (error) throw error;
   return data ?? [];
 }

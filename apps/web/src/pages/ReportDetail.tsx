@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import ReportEvidence from "../components/ReportEvidence";
 import Page from "../components/Page";
 import { issueReport, loadReport, loadReportVersions, type ReportRow, type ReportVersion } from "../lib/reports";
 
@@ -55,15 +56,17 @@ function propertyFireDoorReport(report: ReportRow, selected: ReportVersion) {
         {doors.map((door: any) => {
           const defects = Array.isArray(door.defects) ? door.defects : [];
           const actions = Array.isArray(door.actions) ? door.actions : [];
-          const failed = String(door.outcome || "").toLowerCase() === "fail";
+          const outcome = String(door.outcome || "").toLowerCase();
+          const failed = outcome === "fail";
+          const passed = outcome === "pass";
           return (
-            <section className={`panel inspection-question ${failed ? "inspection-fail" : "inspection-pass"}`} key={door.asset_id}>
+            <section className={`panel inspection-question ${failed ? "inspection-fail" : passed ? "inspection-pass" : ""}`} key={door.asset_id}>
               <div className="inspection-question-header">
                 <div>
                   <div className="eyebrow">{value(door.door_id)} · {value(door.wing)} · FLOOR {value(door.floor)}</div>
                   <h3>{value(door.name)}</h3>
                 </div>
-                <span className={`inspection-result ${failed ? "result-fail" : "result-pass"}`}>{value(door.outcome).toUpperCase()}</span>
+                <span className={`inspection-result ${failed ? "result-fail" : passed ? "result-pass" : "result-na"}`}>{value(door.outcome).toUpperCase()}</span>
               </div>
               {defects.length > 0 && (
                 <div>
@@ -144,6 +147,8 @@ export default function ReportDetail() {
   const answers = Array.isArray(s.answers) ? s.answers : [];
   const defects = Array.isArray(s.defects) ? s.defects : [];
   const evidence = Array.isArray(s.evidence) ? s.evidence : [];
+  const completions = Array.isArray(s.completions) ? s.completions : [];
+  const isDummy = /^QA-|^DUMMY-/i.test(String(asset.asset_code || "")) || String(selected.notes || "").includes("ORION DUMMY RUN");
 
   return (
     <Page title={report.title} kicker="CONTROLLED REPORT">
@@ -159,6 +164,7 @@ export default function ReportDetail() {
         </div>
       </div>
       {error && <div className="warning">{error}</div>}
+      {isDummy && <div className="dummy-report-banner">TEST ONLY — SIMULATED DATA — NOT A CUSTOMER REPORT OR CERTIFICATE</div>}
 
       {report.report_type === "property_fire_door_report" ? propertyFireDoorReport(report, selected) : (
         <article className="panel report-sheet">
@@ -199,7 +205,16 @@ export default function ReportDetail() {
           ))}
 
           <h2>Evidence register</h2>
-          <p>{evidence.length} evidence item(s) recorded within the controlled inspection record.</p>
+          <p>{evidence.length} inspection evidence item(s) recorded.</p>
+          <ReportEvidence items={evidence} inspectionId={report.inspection_id || undefined} />
+          <h2>Reviewed completion evidence</h2>
+          {completions.length === 0 ? <p>No accepted completion submission was recorded when this report version was generated.</p> : completions.map((c: any) => (
+            <section key={c.id}>
+              <p><strong>{value(c.defect_code)}:</strong> {c.notes}</p>
+              <p><strong>Review:</strong> {c.review_notes} · {new Date(c.reviewed_at).toLocaleString()}</p>
+              <ReportEvidence items={c.photos || []} />
+            </section>
+          ))}
 
           {report.report_type === "fraew_report" && (
             <>
@@ -207,7 +222,7 @@ export default function ReportDetail() {
               <p><strong>Fault:</strong> Findings recorded within the controlled inspection responses above.</p>
               <p><strong>Risk:</strong> Failed items and defect severity identify the compliance risk requiring management.</p>
               <p><strong>Action:</strong> Recommended actions are recorded against each failed control and defect.</p>
-              <p><strong>Evidence:</strong> Inspection measurements, observations and photographic evidence are retained within ORION.</p>
+              <p><strong>Evidence:</strong> Inspection measurements and observations are retained within ORION. {evidence.length ? `${evidence.length} photographic evidence item(s) are included in this snapshot.` : "No photographic evidence is recorded in this report snapshot."}</p>
               <p><strong>Who:</strong> Responsibility and remedial status are controlled through the ORION defect lifecycle.</p>
             </>
           )}

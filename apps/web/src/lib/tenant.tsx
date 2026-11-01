@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
+import { resolveTenant } from "./tenantSelection";
 
 export type Tenant = {
   id: string;
@@ -21,14 +22,14 @@ const TenantContext = createContext<TenantContextValue | null>(null);
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [activeTenant, setActiveTenant] = useState<Tenant | null>(null);
+  const [activeTenant, setActiveTenantState] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
       if (!user || !supabase) {
         setTenants([]);
-        setActiveTenant(null);
+        setActiveTenantState(null);
         return;
       }
 
@@ -49,12 +50,21 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         .filter(Boolean) as Tenant[];
 
       setTenants(next);
-      setActiveTenant((current) => current && next.some(t => t.id === current.id) ? current : next[0] ?? null);
+      let preferredId: string | null = null;
+      try { preferredId = localStorage.getItem(`orion:tenant:${user.id}`); } catch { /* Storage may be unavailable in private browsing. */ }
+      setActiveTenantState(resolveTenant(next, preferredId));
       setLoading(false);
     }
 
     load();
-  }, [user]);
+  }, [user?.id]);
+
+  function setActiveTenant(tenant: Tenant) {
+    const allowed = tenants.find(t => t.id === tenant.id);
+    if (!allowed || !user) return;
+    setActiveTenantState(allowed);
+    try { localStorage.setItem(`orion:tenant:${user.id}`, allowed.id); } catch { /* Session remains usable without persistence. */ }
+  }
 
   return (
     <TenantContext.Provider value={{ tenants, activeTenant, loading, setActiveTenant }}>
