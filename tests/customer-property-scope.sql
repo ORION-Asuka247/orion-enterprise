@@ -1,0 +1,78 @@
+-- Append after completion-dummy-run.sql inside one BEGIN/ROLLBACK transaction.
+-- Uses synthetic customers and records only. No login credentials or invitations.
+do $$ declare
+ c uuid; prop_a uuid; prop_b uuid; admin_id uuid; cust_a uuid:=gen_random_uuid(); cust_b uuid:=gen_random_uuid();
+ report_a uuid; report_b uuid; draft_a uuid; asset_b uuid; typ uuid; run_a uuid;
+ path_a text; path_b text; photo_path text; private_path text; staff_claim text;
+begin
+ select (snapshot->'property'->>'id')::uuid into prop_a from orion_qa_reports limit 1;
+ select company_id into c from public.properties where id=prop_a;
+ select m.user_id into admin_id from public.company_memberships m join public.roles r on r.id=m.role_id where m.company_id=c and r.code='company_admin' limit 1;
+ staff_claim:=jsonb_build_object('sub',admin_id,'role','authenticated')::text;
+ insert into auth.users(id,email) values(cust_a,'qa-customer-a-'||cust_a||'@example.invalid'),(cust_b,'qa-customer-b-'||cust_b||'@example.invalid');
+ insert into public.profiles(user_id,display_name) values(cust_a,'TEST Customer A'),(cust_b,'TEST Customer B') on conflict do nothing;
+ insert into public.company_memberships(company_id,user_id,role_id,status) select c,u,id,'active' from public.roles cross join unnest(array[cust_a,cust_b]) u where code='client';
+ perform set_config('request.jwt.claims',staff_claim,true); perform set_config('request.jwt.claim.sub',admin_id::text,true);
+ set local role authenticated;
+ prop_b:=public.create_building_setup(c,'{"name":"QA CUSTOMER B ONLY","reference_code":"QA-CUST-B"}','["Test block"]',0,0,true);
+ reset role;
+ select asset_type_id into typ from public.assets where company_id=c limit 1;
+ set local role authenticated;
+ asset_b:=public.create_asset_record(c,prop_b,null,null,null,typ,'QA-CUSTOMER-B','TEST ONLY — Customer B asset');
+ perform public.orion_set_customer_property(cust_a,prop_a,true);
+ perform public.orion_set_customer_property(cust_b,prop_b,true);
+ reset role;
+ select r.id,r.inspection_id into report_a,run_a from public.orion_reports r join public.orion_inspection_runs i on i.id=r.inspection_id join public.assets a on a.id=i.asset_id where a.property_id=prop_a and a.asset_code='QA-DOOR-001' and r.report_type='fraew_report';
+ insert into public.orion_reports(company_id,property_id,document_number,report_type,title,status,current_version,created_by)
+ values(c,prop_b,'QA-CUSTOMER-B','property_fire_door_report','TEST ONLY — Customer B issued report','issued',1,admin_id) returning id into report_b;
+ insert into public.orion_report_versions(report_id,version_no,source_snapshot,generated_by) values(report_b,1,'{"property":{"name":"Customer B only"}}',admin_id);
+ insert into public.orion_reports(company_id,property_id,document_number,report_type,title,status,current_version,created_by)
+ values(c,prop_a,'QA-CUSTOMER-A-DRAFT','property_fire_door_report','TEST ONLY — unissued draft','generated',1,admin_id) returning id into draft_a;
+ insert into public.orion_report_versions(report_id,version_no,source_snapshot,generated_by) values(draft_a,1,'{"private":"draft only"}',admin_id);
+ path_a:=c||'/qa-customer-a.pdf';path_b:=c||'/qa-customer-b.pdf';private_path:=c||'/unpublished-private.pdf';
+ insert into public.document_vault(property_id,filename,storage_path) values(prop_a,'TEST A.pdf',path_a),(prop_b,'TEST B.pdf',path_b);
+ select storage_path into photo_path from public.orion_inspection_evidence where inspection_id=run_a limit 1;
+ insert into storage.objects(bucket_id,name,metadata) values('generated-documents',path_a,'{"size":100,"mimetype":"application/pdf"}'),('generated-documents',path_b,'{"size":100,"mimetype":"application/pdf"}'),('generated-documents',private_path,'{"size":100,"mimetype":"application/pdf"}'),('inspection-evidence',photo_path,'{"size":100,"mimetype":"image/png"}');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',cust_a,'role','authenticated')::text,true);perform set_config('request.jwt.claim.sub',cust_a::text,true);
+ set local role authenticated;
+ insert into orion_qa_results values('Customer A sees assigned property',(select count(*)=1 from public.properties where company_id=c),'{}');
+ insert into orion_qa_results values('Customer A cannot see property B',(select count(*)=0 from public.properties where id=prop_b),'{}');
+ insert into orion_qa_results values('Customer A cannot see asset B',(select count(*)=0 from public.assets where id=asset_b),'{}');
+ insert into orion_qa_results values('Customer A sees issued own report',(select count(*)=1 from public.orion_reports where id=report_a),'{}');
+ insert into orion_qa_results values('Customer A cannot see report B',(select count(*)=0 from public.orion_reports where id=report_b),'{}');
+ insert into orion_qa_results values('Customer A cannot see own draft',(select count(*)=0 from public.orion_reports where id=draft_a),'{}');
+ insert into orion_qa_results values('Customer A sees current issued version only',(select count(*)=1 from public.orion_report_versions where report_id=report_a),'{}');
+ insert into orion_qa_results values('Customer A raw inspections hidden',(select count(*)=0 from public.orion_inspection_runs where company_id=c),'{}');
+ insert into orion_qa_results values('Customer A raw evidence rows hidden',(select count(*)=0 from public.orion_inspection_evidence where company_id=c),'{}');
+ insert into orion_qa_results values('Customer A other memberships hidden',(select count(*)=1 from public.company_memberships where company_id=c),'{}');
+ insert into orion_qa_results values('Customer A vault only assigned',(select count(*)=1 from public.document_vault where property_id in (prop_a,prop_b)),'{}');
+ insert into orion_qa_results values('Customer A may read approved PDF',(select count(*)=1 from storage.objects where bucket_id='generated-documents' and name=path_a),'{}');
+ insert into orion_qa_results values('Customer A cannot read PDF B',(select count(*)=0 from storage.objects where bucket_id='generated-documents' and name=path_b),'{}');
+ insert into orion_qa_results values('Customer A unpublished file hidden',(select count(*)=0 from storage.objects where bucket_id='generated-documents' and name=private_path),'{}');
+ insert into orion_qa_results values('Customer A issued photo authorised',(select count(*)=1 from storage.objects where bucket_id='inspection-evidence' and name=photo_path),'{}');
+ begin perform public.orion_build_report_snapshot(run_a);insert into orion_qa_results values('Customer raw snapshot RPC denied',false,'{}');exception when insufficient_privilege then insert into orion_qa_results values('Customer raw snapshot RPC denied',true,'{}');end;
+ begin perform public.orion_set_customer_property(cust_a,prop_b,true);insert into orion_qa_results values('Customer cannot grant own property access',false,'{}');exception when others then insert into orion_qa_results values('Customer cannot grant own property access',sqlerrm like '%administrator%','{}');end;
+ begin insert into public.portal_messages(property_id,sender_id,message) values(prop_b,cust_a,'TEST ONLY — forbidden message');insert into orion_qa_results values('Cross-property portal message denied',false,'{}');exception when insufficient_privilege then insert into orion_qa_results values('Cross-property portal message denied',true,'{}');end;
+ insert into public.portal_messages(property_id,sender_id,message) values(prop_a,cust_a,'TEST ONLY — permitted property message');
+ insert into orion_qa_results values('Portal message ID generated',(select count(*)=1 from public.portal_messages where property_id=prop_a and sender_id=cust_a),'{}');
+ reset role;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',cust_b,'role','authenticated')::text,true);perform set_config('request.jwt.claim.sub',cust_b::text,true);
+ set local role authenticated;
+ insert into orion_qa_results values('Customer B cannot see A records',(select count(*)=0 from public.orion_reports where id=report_a),'{}');
+ insert into orion_qa_results values('Customer B sees own issued report',(select count(*)=1 from public.orion_reports where id=report_b),'{}');
+ insert into orion_qa_results values('Customer B cannot see A messages',(select count(*)=0 from public.portal_messages where property_id=prop_a),'{}');
+ reset role;
+ perform set_config('request.jwt.claims',staff_claim,true);perform set_config('request.jwt.claim.sub',admin_id::text,true);
+ set local role authenticated;
+ insert into orion_qa_results values('Staff property view preserved',(select count(*)=2 from public.properties where company_id=c),'{}');
+ insert into orion_qa_results values('Staff draft view preserved',(select count(*)=1 from public.orion_reports where id=draft_a),'{}');
+ perform public.orion_set_customer_property(cust_a,prop_a,false);
+ reset role;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',cust_a,'role','authenticated')::text,true);perform set_config('request.jwt.claim.sub',cust_a::text,true);
+ set local role authenticated;
+ insert into orion_qa_results values('Revoked property disappears',(select count(*)=0 from public.properties where company_id=c),'{}');
+ insert into orion_qa_results values('Revoked report disappears',(select count(*)=0 from public.orion_reports where id=report_a),'{}');
+ insert into orion_qa_results values('Revoked file access denied',(select count(*)=0 from storage.objects where bucket_id='generated-documents' and name=path_a),'{}');
+ reset role;
+end $$;
+select jsonb_build_object('tests',(select jsonb_agg(to_jsonb(t)) from orion_qa_results t),'mode','TRANSACTIONAL ROLE AND STORAGE-METADATA TESTS ONLY; ALL FIXTURES ROLLED BACK') as customer_scope_tests;

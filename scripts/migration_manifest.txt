@@ -22,3 +22,5 @@
 20260815_022_require_inspection_signoff_notes.sql
 
 20261101085526_job_completion_evidence.sql
+
+20261101124727_customer_property_scope.sql

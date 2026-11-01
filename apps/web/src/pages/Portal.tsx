@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { downloadVaultDocument } from "../lib/portal";
 import Page from "../components/Page";
 import { supabase } from "../lib/supabase";
 import { useTenant } from "../lib/tenant";
 
 type Property = { id: string; name: string; reference_code: string | null };
-type VaultRow = { id: string; property_id: string | null; category: string | null; filename: string | null; uploaded_at: string | null };
+type VaultRow = { id: string; property_id: string | null; category: string | null; filename: string | null; storage_path: string | null; uploaded_at: string | null };
 type MessageRow = { id: string; property_id: string | null; sender_id: string | null; message: string | null; created_at: string | null };
 
 export default function Portal() {
@@ -12,6 +14,8 @@ export default function Portal() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [documents, setDocuments] = useState<VaultRow[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [issuedReports, setIssuedReports] = useState<{id: string; title: string; document_number: string}[]>([]);
+  const [downloading, setDownloading] = useState("");
   const [propertyId, setPropertyId] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -20,10 +24,12 @@ export default function Portal() {
 
   async function load() {
     if (!activeTenant || !supabase) {
+      setProperties([]); setDocuments([]); setMessages([]); setIssuedReports([]); setPropertyId("");
       setLoading(false);
       return;
     }
     setLoading(true);
+    setDocuments([]); setMessages([]); setIssuedReports([]);
     setError("");
     const propertyResult = await supabase
       .from("properties")
@@ -37,7 +43,7 @@ export default function Portal() {
     }
     const props = (propertyResult.data ?? []) as Property[];
     setProperties(props);
-    if (!propertyId && props[0]) setPropertyId(props[0].id);
+    setPropertyId(previous => props.some(p => p.id === previous) ? previous : props[0]?.id || "");
 
     const ids = props.map(p => p.id);
     if (ids.length === 0) {
@@ -46,11 +52,14 @@ export default function Portal() {
       setLoading(false);
       return;
     }
-    const [docResult, messageResult] = await Promise.all([
-      supabase.from("document_vault").select("id,property_id,category,filename,uploaded_at").in("property_id", ids).order("uploaded_at", { ascending: false }).limit(30),
-      supabase.from("portal_messages").select("id,property_id,sender_id,message,created_at").in("property_id", ids).order("created_at", { ascending: false }).limit(30)
+    const [docResult, messageResult, reportResult] = await Promise.all([
+      supabase.from("document_vault").select("id,property_id,category,filename,storage_path,uploaded_at").in("property_id", ids).order("uploaded_at", { ascending: false }).limit(30),
+      supabase.from("portal_messages").select("id,property_id,sender_id,message,created_at").in("property_id", ids).order("created_at", { ascending: false }).limit(30),
+      supabase.from("orion_reports").select("id,title,document_number").eq("company_id", activeTenant.id).eq("status", "issued").order("issued_at", {ascending:false}).limit(30)
     ]);
-    if (docResult.error) setError(docResult.error.message);
+    setIssuedReports(reportResult.data ?? []);
+    if (reportResult.error) setError(reportResult.error.message);
+    else if (docResult.error) setError(docResult.error.message);
     else if (messageResult.error) setError(messageResult.error.message);
     setDocuments((docResult.data ?? []) as VaultRow[]);
     setMessages((messageResult.data ?? []) as MessageRow[]);
@@ -84,6 +93,13 @@ export default function Portal() {
       await load();
     }
     setSending(false);
+  }
+
+  async function download(row: VaultRow) {
+    if (!activeTenant || !row.storage_path) return;
+    setDownloading(row.id); setError("");
+    try { await downloadVaultDocument(row.storage_path, row.filename || "ASUKA247-document", activeTenant.id); }
+    catch (e: any) { setError(e.message); } finally { setDownloading(""); }
   }
 
   function propertyName(id: string | null) {
@@ -137,6 +153,8 @@ export default function Portal() {
 
               <section className="panel">
                 <div className="eyebrow">DOCUMENT VAULT</div>
+                <h2>Issued reports</h2>
+                {issuedReports.length === 0 ? <p>No issued reports are available yet.</p> : <ul className="clean">{issuedReports.map(r => <li key={r.id}><Link to={`/reports/${r.id}`}>{r.document_number} · {r.title}</Link></li>)}</ul>}
                 <h2>Shared records</h2>
                 {documents.length === 0 ? (
                   <p className="muted">No client-facing documents have been placed in the portal vault yet.</p>
@@ -146,11 +164,12 @@ export default function Portal() {
                       <li key={row.id}>
                         <b>{row.category || "File"}</b>
                         <span><strong>{row.filename || "Document"}</strong><br /><small>{propertyName(row.property_id)}{row.uploaded_at ? ` · ${new Date(row.uploaded_at).toLocaleDateString()}` : ""}</small></span>
+                        {row.storage_path && <button type="button" disabled={downloading === row.id} onClick={() => download(row)}>{downloading === row.id ? "Downloading…" : "Download"}</button>}
                       </li>
                     ))}
                   </ul>
                 )}
-                <p className="muted">Document upload and approval actions remain permission-controlled and will be exposed only when their commercial workflows are commissioned.</p>
+                <p className="muted">Reports appear here after they are issued. Shared files are available only to authorised users.</p>
               </section>
             </div>
           )}
