@@ -24,3 +24,5 @@
 20261101085526_job_completion_evidence.sql
 
 20261101124727_customer_property_scope.sql
+
+20261101144255_intelligence_ai_audit.sql
