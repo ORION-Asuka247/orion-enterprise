@@ -1,4 +1,4 @@
-import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,copyFileSync,readdirSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,copyFileSync,readdirSync,rmSync,chmodSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -18,6 +18,8 @@ test('Hostinger installer preserves marketing/security rules, backs up the app a
     copyFileSync(new URL('../deploy/install-hostinger-app.sh',import.meta.url),join(release,'install-orion.sh'));
     const files={'app/index.html':'<script src="/app/assets/current.js"></script>','app/assets/current.js':'CURRENT BUNDLE','app/.htaccess':'RewriteEngine On\nRewriteRule ^assets/?$ index.html [L]\n'};
     for(const [path,content] of Object.entries(files)) writeFileSync(join(release,path),content);
+    chmodSync(join(release,'app/assets/current.js'),0o600);
+    chmodSync(join(release,'app/assets'),0o700);
     const manifest=Object.entries(files).map(([path,content])=>`${createHash('sha256').update(content).digest('hex')}  ${path}`).join('\n')+'\n';
     writeFileSync(join(release,'SHA256SUMS'),manifest);
     const run=()=>spawnSync('bash',[join(release,'install-orion.sh')],{encoding:'utf8',env:{...process.env,ORION_DEPLOY_HOME:home}});
@@ -25,6 +27,8 @@ test('Hostinger installer preserves marketing/security rules, backs up the app a
     assert.equal(readFileSync(join(site,'index.html'),'utf8'),'MARKETING HOME');
     assert.equal(readFileSync(join(site,'app/assets/previous.js'),'utf8'),'PREVIOUS BUNDLE');
     assert.equal(readFileSync(join(site,'app/assets/current.js'),'utf8'),'CURRENT BUNDLE');
+    assert.equal(statSync(join(site,'app/assets/current.js')).mode & 0o777,0o644);
+    assert.equal(statSync(join(site,'app/assets')).mode & 0o777,0o755);
     let rules=readFileSync(join(site,'.htaccess'),'utf8');assert.match(rules,/Options -Indexes/);assert.match(rules,/SAMEORIGIN/);
     const backup=join(home,'orion-backups',readdirSync(join(home,'orion-backups'))[0]);
     assert.equal(spawnSync('tar',['-xOf',join(backup,'app.tar.gz'),'app/index.html'],{encoding:'utf8'}).stdout,'PREVIOUS APP');
