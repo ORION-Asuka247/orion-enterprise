@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import ReportEvidence from "../components/ReportEvidence";
 import Page from "../components/Page";
 import { issueReport, loadReport, loadReportVersions, type ReportRow, type ReportVersion } from "../lib/reports";
 
@@ -144,6 +145,8 @@ export default function ReportDetail() {
   const answers = Array.isArray(s.answers) ? s.answers : [];
   const defects = Array.isArray(s.defects) ? s.defects : [];
   const evidence = Array.isArray(s.evidence) ? s.evidence : [];
+  const completions = Array.isArray(s.completions) ? s.completions : [];
+  const isDummy = /^QA-|^DUMMY-/i.test(String(asset.asset_code || "")) || String(selected.notes || "").includes("ORION DUMMY RUN");
 
   return (
     <Page title={report.title} kicker="CONTROLLED REPORT">
@@ -159,6 +162,7 @@ export default function ReportDetail() {
         </div>
       </div>
       {error && <div className="warning">{error}</div>}
+      {isDummy && <div className="dummy-report-banner">TEST ONLY — SIMULATED DATA — NOT A CUSTOMER REPORT OR CERTIFICATE</div>}
 
       {report.report_type === "property_fire_door_report" ? propertyFireDoorReport(report, selected) : (
         <article className="panel report-sheet">
@@ -199,7 +203,16 @@ export default function ReportDetail() {
           ))}
 
           <h2>Evidence register</h2>
-          <p>{evidence.length} evidence item(s) recorded within the controlled inspection record.</p>
+          <p>{evidence.length} inspection evidence item(s) recorded.</p>
+          <ReportEvidence items={evidence} inspectionId={report.inspection_id || undefined} />
+          <h2>Reviewed completion evidence</h2>
+          {completions.length === 0 ? <p>No accepted completion submission was recorded when this report version was generated.</p> : completions.map((c: any) => (
+            <section key={c.id}>
+              <p><strong>{value(c.defect_code)}:</strong> {c.notes}</p>
+              <p><strong>Review:</strong> {c.review_notes} · {new Date(c.reviewed_at).toLocaleString()}</p>
+              <ReportEvidence items={c.photos || []} />
+            </section>
+          ))}
 
           {report.report_type === "fraew_report" && (
             <>

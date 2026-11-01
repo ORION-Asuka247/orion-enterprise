@@ -28,10 +28,10 @@ export default function Login() {
         <div className="brand">ORION<span>ENTERPRISE</span></div>
         <div className="eyebrow">SECURE ACCESS</div>
         <h1>Sign in</h1>
-        <label>Email</label>
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <label>Password</label>
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+        <label htmlFor="orion-email">Email</label>
+        <input id="orion-email" autoComplete="username" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+        <label htmlFor="orion-password">Password</label>
+        <input id="orion-password" autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
         {error && <div className="warning">{error}</div>}
         <button disabled={busy}>{busy ? "Signing in..." : "Sign in"}</button>
       </form>

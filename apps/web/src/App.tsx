@@ -38,7 +38,7 @@ const router = createBrowserRouter([{
     { path: "intelligence", element: <Intelligence /> },
     { path: "portal", element: <Portal /> }
   ]
-}]);
+}], { basename: import.meta.env.BASE_URL });
 
 export default function App() {
   return <RouterProvider router={router} />;

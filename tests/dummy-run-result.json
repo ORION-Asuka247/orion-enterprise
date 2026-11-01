@@ -1,0 +1,404 @@
+{
+  "mode": "DATABASE TRANSACTION ONLY; STORAGE METADATA FIXTURES; NO BROWSER AUTH, BINARY UPLOAD OR EMAIL TESTED; ROLLED BACK",
+  "tests": [
+    {
+      "name": "Anonymous completion submit denied",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Anonymous completion review denied",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Completion bucket stays private",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Building setup RPC",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Asset registration 1",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Missing answers blocked 1",
+      "detail": {
+        "message": "All inspection items must be completed before submission"
+      },
+      "passed": true
+    },
+    {
+      "name": "Blank sign-off blocked 1",
+      "detail": {
+        "message": "Final inspection notes are required before submission"
+      },
+      "passed": true
+    },
+    {
+      "name": "Inspection outcome 1",
+      "detail": {
+        "outcome": "pass",
+        "failed_items": 0,
+        "inspection_id": "fc5a77fd-21fc-4d22-ab35-63c083ab5aa1"
+      },
+      "passed": true
+    },
+    {
+      "name": "Engineer pricing denied 1",
+      "detail": {
+        "message": "Commercial pricing access denied"
+      },
+      "passed": true
+    },
+    {
+      "name": "Report versioning 1",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Report issue status 1",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Foreign company denied 1",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Foreign tenant asset RLS 1",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Asset registration 2",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Missing answers blocked 2",
+      "detail": {
+        "message": "All inspection items must be completed before submission"
+      },
+      "passed": true
+    },
+    {
+      "name": "Missing failure photo blocked",
+      "detail": {
+        "message": "Photographic evidence is required for 1 failed item(s)"
+      },
+      "passed": true
+    },
+    {
+      "name": "Blank sign-off blocked 2",
+      "detail": {
+        "message": "Final inspection notes are required before submission"
+      },
+      "passed": true
+    },
+    {
+      "name": "Inspection outcome 2",
+      "detail": {
+        "outcome": "fail",
+        "failed_items": 1,
+        "inspection_id": "041bef55-5f24-46e2-90a1-c35a2baa9543"
+      },
+      "passed": true
+    },
+    {
+      "name": "Engineer pricing denied 2",
+      "detail": {
+        "message": "Commercial pricing access denied"
+      },
+      "passed": true
+    },
+    {
+      "name": "Unreviewed closure blocked",
+      "detail": {
+        "message": "Reviewed and accepted completion evidence is required before resolving or closing work"
+      },
+      "passed": true
+    },
+    {
+      "name": "Submission leaves work in progress",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Self review denied",
+      "detail": {
+        "message": "Reviewer permission required"
+      },
+      "passed": true
+    },
+    {
+      "name": "Repeat review denied",
+      "detail": {
+        "message": "Submission has already been reviewed"
+      },
+      "passed": true
+    },
+    {
+      "name": "Acceptance does not auto-complete",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Resolved verified closed flow",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Report versioning 2",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Report issue status 2",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Foreign company denied 2",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Foreign tenant asset RLS 2",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Report freezes accepted evidence",
+      "detail": {},
+      "passed": true
+    },
+    {
+      "name": "Reopened work needs fresh evidence",
+      "detail": {
+        "message": "Reviewed and accepted completion evidence is required before resolving or closing work"
+      },
+      "passed": true
+    }
+  ],
+  "reports": [
+    {
+      "snapshot": {
+        "asset": {
+          "id": "401b923f-9bc4-4fcc-a823-4c131a241ff5",
+          "area": null,
+          "name": "TEST ONLY — dummy door 1",
+          "block": null,
+          "floor": null,
+          "model": null,
+          "status": "active",
+          "condition": "unknown",
+          "asset_code": "QA-DOOR-001",
+          "manufacturer": null,
+          "serial_number": null
+        },
+        "answers": [
+          {
+            "unit": "mm",
+            "prompt": "Simulated perimeter gap",
+            "result": "pass",
+            "item_code": "QA-GAP",
+            "section_name": "Perimeter",
+            "response_text": null,
+            "engineer_notes": "ORION DUMMY RUN — simulated observation only",
+            "failure_reason": null,
+            "response_number": 3,
+            "suggested_action": "TEST ONLY — assess alignment and adjust after competent review"
+          },
+          {
+            "unit": null,
+            "prompt": "Simulated closer operation",
+            "result": "pass",
+            "item_code": "QA-CLOSER",
+            "section_name": "Closer",
+            "response_text": "Closes and latches",
+            "engineer_notes": "ORION DUMMY RUN — simulated observation only",
+            "failure_reason": null,
+            "response_number": null,
+            "suggested_action": null
+          }
+        ],
+        "defects": [],
+        "evidence": [
+          {
+            "id": "e66bc0c3-4d75-4b02-b7b2-8dd6757e0cb2",
+            "answer_id": "4b3ade81-8a83-460d-a10c-c744ed9aa2d7",
+            "file_name": "TEST ONLY — simulated photograph reference.png",
+            "mime_type": "image/png",
+            "captured_at": "2026-11-01T09:03:57.659126+00:00",
+            "storage_path": "05f8d38b-41ab-4fcf-9da1-48661def0397/fc5a77fd-21fc-4d22-ab35-63c083ab5aa1/QA-NO-BINARY-QA-GAP.png",
+            "storage_bucket": "inspection-evidence"
+          },
+          {
+            "id": "201236af-bef0-4021-aeb7-e531f85f5a13",
+            "answer_id": "ba8e2922-1d7c-4e01-a356-01dd710c7ede",
+            "file_name": "TEST ONLY — simulated photograph reference.png",
+            "mime_type": "image/png",
+            "captured_at": "2026-11-01T09:03:57.661255+00:00",
+            "storage_path": "05f8d38b-41ab-4fcf-9da1-48661def0397/fc5a77fd-21fc-4d22-ab35-63c083ab5aa1/QA-NO-BINARY-QA-CLOSER.png",
+            "storage_bucket": "inspection-evidence"
+          }
+        ],
+        "property": {
+          "id": "0548fab5-f6c6-4d95-9648-1837f4e6327e",
+          "name": "ORION DUMMY RUN — demonstration building",
+          "county": null,
+          "postcode": null,
+          "town_city": null,
+          "address_line1": "SIMULATED — not a real address",
+          "address_line2": null,
+          "reference_code": "QA-ONLY"
+        },
+        "template": {
+          "code": "QA-DOOR",
+          "name": "ORION DUMMY RUN — demonstration rules, not approved compliance rules",
+          "version": 1,
+          "asset_type_code": "QA_FIRE_DOOR"
+        },
+        "inspection": {
+          "id": "fc5a77fd-21fc-4d22-ab35-63c083ab5aa1",
+          "status": "submitted",
+          "outcome": "pass",
+          "started_at": "2026-11-01T09:03:57.652052+00:00",
+          "submitted_at": "2026-11-01T09:03:57.663532+00:00",
+          "engineer_notes": "ORION DUMMY RUN — SIMULATED DATA. No real property was inspected. Synthetic evidence references only."
+        },
+        "completions": [],
+        "generated_at": "2026-11-01T09:03:57.669605+00:00"
+      },
+      "asset_code": "QA-DOOR-001"
+    },
+    {
+      "snapshot": {
+        "asset": {
+          "id": "a7b0d836-dd6c-4126-ae2f-84cb4d72a56d",
+          "area": null,
+          "name": "TEST ONLY — dummy door 2",
+          "block": null,
+          "floor": null,
+          "model": null,
+          "status": "active",
+          "condition": "unknown",
+          "asset_code": "QA-DOOR-002",
+          "manufacturer": null,
+          "serial_number": null
+        },
+        "answers": [
+          {
+            "unit": "mm",
+            "prompt": "Simulated perimeter gap",
+            "result": "fail",
+            "item_code": "QA-GAP",
+            "section_name": "Perimeter",
+            "response_text": null,
+            "engineer_notes": "ORION DUMMY RUN — simulated observation only",
+            "failure_reason": "Measured 6 mm. Required range is 2-4 mm.",
+            "response_number": 6,
+            "suggested_action": "TEST ONLY — assess alignment and adjust after competent review"
+          },
+          {
+            "unit": null,
+            "prompt": "Simulated closer operation",
+            "result": "pass",
+            "item_code": "QA-CLOSER",
+            "section_name": "Closer",
+            "response_text": "Closes and latches",
+            "engineer_notes": "ORION DUMMY RUN — simulated observation only",
+            "failure_reason": null,
+            "response_number": null,
+            "suggested_action": null
+          }
+        ],
+        "defects": [
+          {
+            "title": "Simulated perimeter gap",
+            "status": "closed",
+            "severity": "medium",
+            "created_at": "2026-11-01T09:03:57.685102+00:00",
+            "defect_code": "DEF-EEC7B479",
+            "description": "Measured 6 mm. Required range is 2-4 mm. Engineer notes: ORION DUMMY RUN — simulated observation only",
+            "suggested_action": "TEST ONLY — assess alignment and adjust after competent review"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "53241905-b23e-4e8d-8e08-cec44e9fd739",
+            "answer_id": "a500b65d-fdff-46a8-855a-894abfc64f45",
+            "file_name": "TEST ONLY — simulated photograph reference.png",
+            "mime_type": "image/png",
+            "captured_at": "2026-11-01T09:03:57.686281+00:00",
+            "storage_path": "05f8d38b-41ab-4fcf-9da1-48661def0397/041bef55-5f24-46e2-90a1-c35a2baa9543/QA-NO-BINARY-QA-CLOSER.png",
+            "storage_bucket": "inspection-evidence"
+          },
+          {
+            "id": "76a56129-1d91-4bc2-b872-1bbcfe92a6e5",
+            "answer_id": "7ce1b931-7705-460c-a328-c4e1d35d486e",
+            "file_name": "TEST ONLY — simulated photograph reference.png",
+            "mime_type": "image/png",
+            "captured_at": "2026-11-01T09:03:57.688394+00:00",
+            "storage_path": "05f8d38b-41ab-4fcf-9da1-48661def0397/041bef55-5f24-46e2-90a1-c35a2baa9543/QA-NO-BINARY-gap.png",
+            "storage_bucket": "inspection-evidence"
+          }
+        ],
+        "property": {
+          "id": "0548fab5-f6c6-4d95-9648-1837f4e6327e",
+          "name": "ORION DUMMY RUN — demonstration building",
+          "county": null,
+          "postcode": null,
+          "town_city": null,
+          "address_line1": "SIMULATED — not a real address",
+          "address_line2": null,
+          "reference_code": "QA-ONLY"
+        },
+        "template": {
+          "code": "QA-DOOR",
+          "name": "ORION DUMMY RUN — demonstration rules, not approved compliance rules",
+          "version": 1,
+          "asset_type_code": "QA_FIRE_DOOR"
+        },
+        "inspection": {
+          "id": "041bef55-5f24-46e2-90a1-c35a2baa9543",
+          "status": "submitted",
+          "outcome": "fail",
+          "started_at": "2026-11-01T09:03:57.683216+00:00",
+          "submitted_at": "2026-11-01T09:03:57.689869+00:00",
+          "engineer_notes": "ORION DUMMY RUN — SIMULATED DATA. No real property was inspected. Synthetic evidence references only."
+        },
+        "completions": [
+          {
+            "id": "d07bccdc-1fee-43aa-8b93-5aa67410a6cf",
+            "notes": "ORION DUMMY RUN — corrected simulated detail and completion notes.",
+            "photos": [
+              {
+                "caption": "Wide completion view",
+                "storage_path": "05f8d38b-41ab-4fcf-9da1-48661def0397/77551716-4200-4acb-9b3e-6cbe5d6416a0/b1ff66c5-b6f8-4ca1-a996-32f33c75f9b3/wide.png",
+                "storage_bucket": "completion-evidence"
+              },
+              {
+                "caption": "Completion detail",
+                "storage_path": "05f8d38b-41ab-4fcf-9da1-48661def0397/77551716-4200-4acb-9b3e-6cbe5d6416a0/b1ff66c5-b6f8-4ca1-a996-32f33c75f9b3/detail.png",
+                "storage_bucket": "completion-evidence"
+              }
+            ],
+            "defect_code": "DEF-EEC7B479",
+            "reviewed_at": "2026-11-01T09:03:57.702956+00:00",
+            "review_notes": "ORION DUMMY RUN — evidence accepted for database workflow test only."
+          }
+        ],
+        "generated_at": "2026-11-01T09:03:57.711741+00:00"
+      },
+      "asset_code": "QA-DOOR-002"
+    }
+  ]
+}

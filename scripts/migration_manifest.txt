@@ -20,3 +20,5 @@
 20260815_020_release_rls_policies.sql
 20260815_021_rpc_surface_lockdown.sql
 20260815_022_require_inspection_signoff_notes.sql
+
+20261101085526_job_completion_evidence.sql

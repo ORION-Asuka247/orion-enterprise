@@ -4,6 +4,7 @@ import Page from "../components/Page";
 import { loadAssetDetail, type AssetDetailRecord } from "../lib/assets";
 import {
   loadInspectionAnswers,
+  loadInspectionEvidence,
   loadInspectionItems,
   loadInspectionRun,
   saveInspectionAnswer,
@@ -28,6 +29,7 @@ type Draft = {
   photoRequired?: boolean;
   photoUploaded?: boolean;
   file?: File | null;
+  dirty?: boolean;
 };
 
 function controlledChoices(item: InspectionItem) {
@@ -71,10 +73,12 @@ export default function AssetInspection() {
       }
 
       setRun(r);
+      setFinalNotes(r.engineer_notes || "");
 
-      const [questionRows, answerRows] = await Promise.all([
+      const [questionRows, answerRows, evidenceRows] = await Promise.all([
         loadInspectionItems(r.template_id),
-        loadInspectionAnswers(r.id)
+        loadInspectionAnswers(r.id),
+        loadInspectionEvidence(r.id)
       ]);
 
       setItems(questionRows);
@@ -87,7 +91,8 @@ export default function AssetInspection() {
           notes: answer.engineer_notes || "",
           result: answer.result,
           failureReason: answer.failure_reason,
-          answerId: answer.id
+          answerId: answer.id,
+          photoUploaded: evidenceRows.some(e => e.answer_id === answer.id)
         };
       }
 
@@ -129,7 +134,8 @@ export default function AssetInspection() {
         ...current,
         [itemId]: {
           ...previous,
-          ...patch
+          ...patch,
+          dirty: patch.dirty ?? (("responseText" in patch || "responseNumber" in patch || "notes" in patch) ? true : previous.dirty)
         }
       };
     });
@@ -168,11 +174,7 @@ export default function AssetInspection() {
 
       let photoUploaded = draft.photoUploaded || false;
 
-      if (
-        result.result === "fail" &&
-        result.photo_required_on_fail &&
-        draft.file
-      ) {
+      if (draft.file) {
         await uploadInspectionEvidence({
           companyId: run.company_id,
           assetId: run.asset_id,
@@ -189,7 +191,8 @@ export default function AssetInspection() {
         answerId: result.answer_id,
         photoRequired: result.photo_required_on_fail && result.result === "fail",
         photoUploaded,
-        file: draft.file || null
+        file: null,
+        dirty: false
       });
     } catch (e: any) {
       setError(e?.message || "Unable to save this inspection item.");
@@ -364,19 +367,19 @@ export default function AssetInspection() {
                 />
               </label>
 
-              {(item.photo_required_on_fail || draft.photoRequired) && (
+              {(
                 <label className="inspection-field">
                   Photographic evidence
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     capture="environment"
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                       setDraft(item.id, { file: e.target.files?.[0] || null })
                     }
                   />
                   <small>
-                    Required if this item fails. On a phone this can open the camera directly.
+                    Add evidence for any finding, including a satisfactory result. JPEG, PNG or WebP, up to 10 MB. A photograph is mandatory where the control requires it.
                   </small>
                 </label>
               )}
@@ -431,9 +434,11 @@ export default function AssetInspection() {
             placeholder="Overall observations, access limitations or follow-up requirements."
           />
         </label>
-        <button disabled={submitting || completed !== items.length} onClick={finish}>
+        <button disabled={submitting || !!busyItem || completed !== items.length || !finalNotes.trim() || Object.values(drafts).some(d => d.file || d.dirty)} onClick={finish}>
           {submitting ? "Submitting..." : "Submit inspection"}
         </button>
+        {!finalNotes.trim() && <small>Final inspection notes are required.</small>}
+        {Object.values(drafts).some(d => d.file || d.dirty) && <small>Save changed responses and selected photographs before submitting.</small>}
         {completed !== items.length && (
           <small>Complete all {items.length} controlled items before submission.</small>
         )}

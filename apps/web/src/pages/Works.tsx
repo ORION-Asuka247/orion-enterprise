@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Page from "../components/Page";
+import CompletionEvidence from "../components/CompletionEvidence";
 import AdminRateEditor from "../components/AdminRateEditor";
 import { loadDefects, updateDefect, type OrionDefect, type OrionDefectStatus } from "../lib/defects";
 import { consolidateRemedials } from "../lib/remedials";
@@ -8,7 +9,11 @@ import { loadPricingConfig, priceRemedialPackages, type ClientRateProfile, type 
 import { loadCommercialPricingAccess, loadCommercialRateEditAccess, COMMERCIAL_PRICING_PERMISSION } from "../lib/commercialAccess";
 import { useTenant } from "../lib/tenant";
 
-const statusOrder: OrionDefectStatus[] = ["open", "assigned", "in_progress", "resolved", "verified", "closed", "cancelled"];
+const transitions: Record<OrionDefectStatus, OrionDefectStatus[]> = {
+  open: ["assigned", "in_progress", "cancelled"], assigned: ["open", "in_progress", "cancelled"],
+  in_progress: ["assigned", "resolved", "cancelled"], resolved: ["in_progress", "verified"],
+  verified: ["in_progress", "closed"], closed: ["in_progress"], cancelled: ["open"]
+};
 
 function label(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -119,7 +124,7 @@ export default function Works() {
         defectId: row.id,
         status,
         remedialNotes: notes[row.id] || null,
-        resolutionNotes: status === "resolved" ? (notes[row.id] || null) : null
+        resolutionNotes: status === "resolved" ? (notes[row.id] ?? row.resolution_notes ?? row.remedial_notes ?? null) : null
       });
       await refresh();
     } catch (e: any) {
@@ -345,15 +350,18 @@ export default function Works() {
 
               <div className="inspection-actions">
                 <Link className="button-link secondary-link" to={`/assets/${row.asset_id}`}>Asset record</Link>
+                <button type="button" disabled={busy === row.id || notes[row.id] == null} onClick={() => changeStatus(row, row.status)}>Save work notes</button>
                 <select
                   aria-label={`Update status for ${row.defect_code}`}
                   value={row.status}
                   disabled={busy === row.id}
                   onChange={e => changeStatus(row, e.target.value as OrionDefectStatus)}
                 >
-                  {statusOrder.map(status => <option key={status} value={status}>{label(status)}</option>)}
+                  {[row.status, ...transitions[row.status]].map(status => <option key={status} value={status}>{label(status)}</option>)}
                 </select>
               </div>
+
+              <CompletionEvidence companyId={row.company_id} defectId={row.id} />
 
               {(row.resolved_at || row.verified_at) && (
                 <small>
