@@ -373,13 +373,13 @@ export default function AssetInspection() {
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    capture="environment"
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                       setDraft(item.id, { file: e.target.files?.[0] || null })
                     }
                   />
+                  {draft.file && <small role="status">Selected photograph: {draft.file.name}. Save this response to upload it.</small>}
                   <small>
-                    Add evidence for any finding, including a satisfactory result. JPEG, PNG or WebP, up to 10 MB. A photograph is mandatory where the control requires it.
+                    Choose a saved photograph or use your phone's camera. Add evidence for any finding, including a satisfactory result. JPEG, PNG or WebP, up to 10 MB. A photograph is mandatory where the control requires it.
                   </small>
                 </label>
               )}

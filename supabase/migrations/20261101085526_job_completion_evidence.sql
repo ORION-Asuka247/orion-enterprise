@@ -163,3 +163,20 @@ end; $$;
 revoke all on function public.orion_build_report_snapshot(uuid) from public, anon;
 grant execute on function public.orion_build_report_snapshot(uuid) to authenticated;
 
+
+-- Browser users generate versions through the authorised RPC; snapshots are not editable via the Data API.
+revoke insert,update,delete on public.orion_report_versions from authenticated,anon;
+grant select on public.orion_report_versions to authenticated;
+
+create or replace function public.orion_guard_certificate_outcome()
+returns trigger language plpgsql security invoker set search_path=public as $$
+begin
+  if new.report_type='certificate' and not exists (
+    select 1 from public.orion_inspection_runs r where r.id=new.inspection_id and r.company_id=new.company_id
+      and r.status='submitted' and r.outcome='pass'
+  ) then raise exception 'Only a passed submitted inspection can have an inspection certificate'; end if;
+  return new;
+end; $$;
+revoke all on function public.orion_guard_certificate_outcome() from public,anon,authenticated;
+create trigger orion_certificate_outcome_guard before insert or update on public.orion_reports
+for each row execute function public.orion_guard_certificate_outcome();

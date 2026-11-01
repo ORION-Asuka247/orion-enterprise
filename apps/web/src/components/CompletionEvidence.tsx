@@ -50,8 +50,8 @@ export default function CompletionEvidence({ companyId, defectId }: { companyId:
     {canSubmit && <>
       <label className="inspection-field">Work carried out and outstanding issues<textarea value={notes} maxLength={4000} onChange={e => setNotes(e.target.value)} /></label>
       <div className="grid two" key={fileKey}>
-        <label className="inspection-field">Wide completion photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setWide(e.target.files?.[0] || null)} /></label>
-        <label className="inspection-field">Detail completion photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setDetail(e.target.files?.[0] || null)} /></label>
+        <label className="inspection-field">Wide completion photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setWide(e.target.files?.[0] || null)} />{wide && <small role="status">Selected: {wide.name}</small>}</label>
+        <label className="inspection-field">Detail completion photograph<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setDetail(e.target.files?.[0] || null)} />{detail && <small role="status">Selected: {detail.name}</small>}</label>
       </div>
       <button type="button" disabled={busy || notes.trim().length < 10 || !wide || !detail} onClick={submit}>{busy ? "Saving…" : "Submit evidence for review"}</button>
     </>}

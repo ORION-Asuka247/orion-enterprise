@@ -56,15 +56,17 @@ function propertyFireDoorReport(report: ReportRow, selected: ReportVersion) {
         {doors.map((door: any) => {
           const defects = Array.isArray(door.defects) ? door.defects : [];
           const actions = Array.isArray(door.actions) ? door.actions : [];
-          const failed = String(door.outcome || "").toLowerCase() === "fail";
+          const outcome = String(door.outcome || "").toLowerCase();
+          const failed = outcome === "fail";
+          const passed = outcome === "pass";
           return (
-            <section className={`panel inspection-question ${failed ? "inspection-fail" : "inspection-pass"}`} key={door.asset_id}>
+            <section className={`panel inspection-question ${failed ? "inspection-fail" : passed ? "inspection-pass" : ""}`} key={door.asset_id}>
               <div className="inspection-question-header">
                 <div>
                   <div className="eyebrow">{value(door.door_id)} · {value(door.wing)} · FLOOR {value(door.floor)}</div>
                   <h3>{value(door.name)}</h3>
                 </div>
-                <span className={`inspection-result ${failed ? "result-fail" : "result-pass"}`}>{value(door.outcome).toUpperCase()}</span>
+                <span className={`inspection-result ${failed ? "result-fail" : passed ? "result-pass" : "result-na"}`}>{value(door.outcome).toUpperCase()}</span>
               </div>
               {defects.length > 0 && (
                 <div>
@@ -220,7 +222,7 @@ export default function ReportDetail() {
               <p><strong>Fault:</strong> Findings recorded within the controlled inspection responses above.</p>
               <p><strong>Risk:</strong> Failed items and defect severity identify the compliance risk requiring management.</p>
               <p><strong>Action:</strong> Recommended actions are recorded against each failed control and defect.</p>
-              <p><strong>Evidence:</strong> Inspection measurements, observations and photographic evidence are retained within ORION.</p>
+              <p><strong>Evidence:</strong> Inspection measurements and observations are retained within ORION. {evidence.length ? `${evidence.length} photographic evidence item(s) are included in this snapshot.` : "No photographic evidence is recorded in this report snapshot."}</p>
               <p><strong>Who:</strong> Responsibility and remedial status are controlled through the ORION defect lifecycle.</p>
             </>
           )}

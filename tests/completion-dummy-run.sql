@@ -129,10 +129,20 @@ begin
     perform set_config('request.jwt.claims',jsonb_build_object('sub',reviewer,'role','authenticated')::text,true);
     perform set_config('request.jwt.claim.sub',reviewer::text,true);
     set local role authenticated;
+    if i=2 then
+      begin
+        perform public.orion_generate_report(run,'certificate','ORION DUMMY RUN — failed inspection must not produce a certificate');
+        insert into orion_qa_results values('Failed inspection certificate blocked',false,'{}');
+      exception when others then insert into orion_qa_results values('Failed inspection certificate blocked',sqlerrm like '%Only a passed submitted inspection%',jsonb_build_object('message',sqlerrm)); end;
+    end if;
     rpt:=public.orion_generate_report(run,'fraew_report','ORION DUMMY RUN — TEST ONLY. Synthetic evidence; do not send to customer.');
     insert into orion_qa_reports select 'QA-DOOR-00'||i,source_snapshot from public.orion_report_versions where report_id=rpt and version_no=1;
     perform public.orion_generate_report(run,'fraew_report','ORION DUMMY RUN — versioning test');
     insert into orion_qa_results values('Report versioning '||i,(select current_version=2 from public.orion_reports where id=rpt),'{}');
+    begin
+      update public.orion_report_versions set notes='Tamper attempt - must fail' where report_id=rpt;
+      insert into orion_qa_results values('Snapshot API alteration denied '||i,false,'{}');
+    exception when insufficient_privilege then insert into orion_qa_results values('Snapshot API alteration denied '||i,true,jsonb_build_object('message',sqlerrm)); end;
     perform public.orion_issue_report(rpt);
     insert into orion_qa_results values('Report issue status '||i,(select status='issued' from public.orion_reports where id=rpt),'{}');
     insert into orion_qa_results values('Foreign company denied '||i,not public.is_company_member(outsider),'{}');

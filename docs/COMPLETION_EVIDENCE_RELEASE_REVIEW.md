@@ -13,7 +13,7 @@ Development branch only. The migration has been executed in a transaction for va
 - Root and `/app/` production builds compiled.
 - Migration manifest passed.
 - Four completion file/note boundary tests passed (`node --test tests/completion-rules.test.mjs`).
-- 31 transactional database checks passed; results and two report snapshots are in `tests/dummy-run-result.json`.
+- 34 transactional database checks passed; results and two report snapshots are in `tests/dummy-run-result.json`.
 - The dummy run uses an isolated QA tenant, temporary role memberships, simulated request claims and synthetic evidence/Storage metadata. Records and proposed schema were rolled back. PostgreSQL sequences can consume report numbers even when rolled back.
 - Two dummy assets tested pass/fail outcomes, missing answers/photos/sign-off, restricted engineer pricing, completion rejection/resubmission/review, closure/reopening controls, accepted-evidence snapshots, report versioning and issue status. Database issue status is not email delivery.
 - Anonymous submit/review denied; completion bucket remains private.
@@ -42,3 +42,15 @@ In a trusted Supabase SQL test connection, execute `BEGIN`, the new migration, `
 The two browser-created records remain labelled `QA-BROWSER-001` and `QA-BROWSER-002` under `ORION DUMMY RUN 01NOV2026 — NOT A CUSTOMER` in `ORION Security Test Tenant`. They are not the rolled-back `QA-DOOR-001/002` database fixtures. No browser inspection, binary upload, browser-generated PDF or delivery has passed yet. Camera detection was unavailable in this cloud browser; the manual fallback successfully opened QA-BROWSER-002. The regulatory module loaded and reported no commissioned sources in the test tenant.
 
 GitHub Actions release checks and Netlify's PR deployment-preview build passed for commit 4267cf14f0f1a7a449cd88bf62b5a37659f0f90a. A successful preview build does not prove the new database migration or browser workflow has been deployed/tested. The production branch is unchanged.
+
+## Fix continuation — 1 November 2026
+
+The isolated demonstration template `QA-BROWSER-20261101` is now active only in ORION Security Test Tenant. QA-BROWSER-001 completed the actual signed-in browser inspection with a simulated 3 mm gap and satisfactory closer answer. Blank final notes were rejected. Its browser-generated FRAEW report is `FR-2026-00011`, report ID `aef65fbc-5384-4027-9359-7bf973c9680b`, left generated, not issued or emailed.
+
+QA-BROWSER-002 recorded a simulated 6 mm gap, generated a defect, and correctly refused submission without a photograph. The cloud browser's file chooser twice returned without attaching a file, although the shared synthetic PNG exists. No Storage upload request was proved; this is an unresolved attachment limitation in this browser, not established evidence that the application's Storage API is broken. The failing inspection remains in progress rather than bypassing its evidence requirement.
+
+Additional fixes remove forced camera capture, show selected filenames, style uninspected property-report entries neutrally, avoid claiming photos exist in empty evidence snapshots, block certificates for failed/non-submitted inspections, and revoke Data API mutation of report-version snapshots. The revised transactional suite passed 34 checks; four file/note boundary tests and the web build passed. These application/database changes remain in draft PR #8, not production.
+
+The earlier missing-template blocker is resolved for the isolated test tenant. Remaining gates include a real binary upload and private-photo display/print, review by separate authorised users in the staged UI, customer/property restrictions, and confirmed delivery. No customer launch date is claimed.
+
+Dependency follow-up: React Router DOM is pinned to 7.18.5, compatible with the existing React 18 / Node 20+ setup. `npm audit --omit=dev` now reports zero known vulnerabilities; the earlier two routing advisories are resolved in this branch. Build and four completion-input tests passed after the upgrade. Signed-in preview navigation still requires its own browser verification before merging.
