@@ -1,3 +1,4 @@
+import IntelligenceAssistant from "../components/IntelligenceAssistant";
 import { inspectionPassRate } from "../lib/launchRules";
 import { useEffect, useMemo, useState } from "react";
 import Page from "../components/Page";
@@ -112,6 +113,8 @@ export default function Intelligence() {
             <div><span>Inspection pass rate</span><strong>{metrics.inspections ? `${passRate}%` : "—"}</strong></div>
             <div><span>Open defects</span><strong>{metrics.openDefects}</strong></div>
           </div>
+
+          {activeTenant && <IntelligenceAssistant key={activeTenant.id} companyId={activeTenant.id} />}
 
           <div className="grid two">
             <section className="panel">
