@@ -54,11 +54,14 @@ export default function AssetInspection() {
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [finalNotes, setFinalNotes] = useState("");
+  const [loading, setLoading] = useState(true);
 
   async function initialise() {
     if (!activeTenant || !assetId) return;
 
     setError("");
+    setLoading(true);
+    setRun(null); setItems([]); setDrafts({});
 
     try {
       const a = await loadAssetDetail(activeTenant.id, assetId);
@@ -99,6 +102,8 @@ export default function AssetInspection() {
       setDrafts(seeded);
     } catch (e: any) {
       setError(e?.message || "Unable to load inspection.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -229,7 +234,7 @@ export default function AssetInspection() {
     [items, drafts]
   );
 
-  if (!asset) {
+  if (loading || !asset) {
     return (
       <Page title="Inspection" kicker="GUIDED WORKFLOW">
         {error ? <div className="warning">{error}</div> : <div className="panel">Loading asset...</div>}

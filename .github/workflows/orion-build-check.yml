@@ -7,6 +7,16 @@ on:
     branches: [main]
 
 jobs:
+  report-print:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install weasyprint==70.0 pypdf==6.10.0
+      - run: python3 tests/check_report_print.py
+
   migration-integrity:
     runs-on: ubuntu-latest
     steps:

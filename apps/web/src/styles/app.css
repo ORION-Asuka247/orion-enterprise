@@ -122,7 +122,16 @@ button.secondary{background:#1a232d;color:#d9e1e9;border:1px solid #344150}
   .scanner-frame video{height:330px}
 }
 @media print{
-  body *{visibility:hidden!important}
+  html,body,.app-shell,main,.content{background:#fff!important;color:#000!important}
+  .app-shell{display:block!important}
+  .app-shell>aside,.topbar,.page-head,.no-print{display:none!important}
+  .app-shell>main{margin:0!important;width:100%!important}
+  .content{padding:0!important}
+  .report-sheet{box-shadow:none!important;overflow:visible!important;max-width:none!important}
+  .report-sheet img{max-width:100%!important;break-inside:avoid}
+  .report-sheet h2,.report-sheet h3{break-after:avoid}
+  .report-sheet .inspection-question{break-inside:avoid;box-shadow:none!important}
+  :where(body:has(.asset-label-print)) *{visibility:hidden!important}
   .asset-label-print,.asset-label-print *{visibility:visible!important}
   .asset-label-print{
     display:block!important;

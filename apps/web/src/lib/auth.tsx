@@ -23,16 +23,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    let active = true, authVersion = 0;
+    const initialVersion = authVersion;
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      setLoading(false);
-    });
+      if (!active || authVersion !== initialVersion) return;
+      setSession(data.session ?? null); setLoading(false);
+    }).catch(() => { if (active && authVersion === initialVersion) { setSession(null); setLoading(false); } });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
+      authVersion++;
+      if (active) { setSession(next); setLoading(false); }
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({

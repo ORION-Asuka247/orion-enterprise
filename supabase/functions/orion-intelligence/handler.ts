@@ -76,7 +76,9 @@ export function createHandler(config:Config,request:Fetch=fetch) {
       if(!result.ok) {
         // Classify only known codes; never persist or return upstream text or credentials.
         const failure=await result.json().catch(()=>({}));
-        const providerCode=failure?.error?.code;
+        const providerCode=failure?.error?.code || failure?.error?.type;
+        const safeCodes=['insufficient_quota','invalid_api_key','rate_limit_exceeded','model_not_found','invalid_request_error','billing_hard_limit_reached','access_terminated','permission_denied'];
+        console.warn('ORION provider rejection',JSON.stringify({status:result.status,code:safeCodes.includes(providerCode)?providerCode:'unclassified'}));
         const code=providerCode==='insufficient_quota'?'provider_quota_exhausted':
           result.status===401?'provider_authentication_failed':
           providerCode==='rate_limit_exceeded'?'provider_rate_limited':

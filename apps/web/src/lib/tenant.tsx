@@ -8,12 +8,14 @@ export type Tenant = {
   id: string;
   name: string;
   slug: string;
+  isCustomer?: boolean;
 };
 
 type TenantContextValue = {
   tenants: Tenant[];
   activeTenant: Tenant | null;
   loading: boolean;
+  error: string;
   setActiveTenant(tenant: Tenant): void;
 };
 
@@ -23,30 +25,36 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [activeTenant, setActiveTenantState] = useState<Tenant | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let current = true;
     async function load() {
+      setTenants([]); setActiveTenantState(null); setError("");
       if (!user || !supabase) {
         setTenants([]);
         setActiveTenantState(null);
+        setLoading(false);
         return;
       }
 
       setLoading(true);
       const { data, error } = await supabase
         .from("company_memberships")
-        .select("company_id, companies(id,name,slug)")
+        .select("company_id, companies(id,name,slug), roles(code)")
         .eq("user_id", user.id)
         .eq("status", "active");
 
+      if (!current) return;
       if (error) {
         setLoading(false);
-        throw error;
+        setError("Unable to load your workspaces. Please refresh and try again.");
+        return;
       }
 
       const next = (data ?? [])
-        .map((row: any) => row.companies)
+        .map((row: any) => row.companies ? {...row.companies,isCustomer:row.roles?.code === "client"} : null)
         .filter(Boolean) as Tenant[];
 
       setTenants(next);
@@ -56,7 +64,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
 
-    load();
+    load().catch(() => { if (current) { setLoading(false); setError("Unable to load your workspaces. Please refresh and try again."); } });
+    return () => { current = false; };
   }, [user?.id]);
 
   function setActiveTenant(tenant: Tenant) {
@@ -67,7 +76,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <TenantContext.Provider value={{ tenants, activeTenant, loading, setActiveTenant }}>
+    <TenantContext.Provider value={{ tenants, activeTenant, loading, error, setActiveTenant }}>
       {children}
     </TenantContext.Provider>
   );
