@@ -1,3 +1,4 @@
+import { assetQrUrl } from "../lib/launchRules";
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Link, useParams } from "react-router-dom";
@@ -99,7 +100,7 @@ export default function AssetDetail() {
     );
   }
 
-  const qrUrl = `${window.location.origin}/q/${asset.qr_token}`;
+  const qrUrl = assetQrUrl(window.location.origin, import.meta.env.BASE_URL, asset.qr_token);
   const location = [asset.properties?.name, asset.blocks?.name, asset.floors?.name, asset.areas?.name].filter(Boolean).join(" - ");
   const activeDefects = defects.filter(d => !["resolved", "verified", "closed"].includes(d.status)).length;
 

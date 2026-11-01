@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReportEvidence from "../components/ReportEvidence";
 import Page from "../components/Page";
+import { supabase } from "../lib/supabase";
 import { issueReport, loadReport, loadReportVersions, type ReportRow, type ReportVersion } from "../lib/reports";
 
 function value(v: unknown) {
@@ -106,15 +107,19 @@ export default function ReportDetail() {
   const [selected, setSelected] = useState<ReportVersion | null>(null);
   const [error, setError] = useState("");
   const [issuing, setIssuing] = useState(false);
+  const [canIssue, setCanIssue] = useState(false);
 
   async function load() {
     if (!reportId) return;
     setError("");
+    setCanIssue(false);
     try {
       const [r, v] = await Promise.all([loadReport(reportId), loadReportVersions(reportId)]);
       setReport(r);
       setVersions(v);
       setSelected(v[0] || null);
+      const access = await supabase?.rpc("has_permission", {target_company:r.company_id,permission_code:"report.generate"});
+      setCanIssue(access?.data === true);
     } catch (e: any) {
       setError(e?.message || "Unable to load report.");
     }
@@ -159,7 +164,7 @@ export default function ReportDetail() {
         </div>
         <div className="inspection-actions">
           <Link className="button-link secondary-link" to="/reports">Back to reports</Link>
-          {report.status !== "issued" && <button onClick={markIssued} disabled={issuing}>{issuing ? "Issuing..." : "Mark issued"}</button>}
+          {canIssue && report.status === "generated" && <button onClick={markIssued} disabled={issuing}>{issuing ? "Issuing..." : "Mark issued"}</button>}
           <button type="button" onClick={() => window.print()}>Print / Save PDF</button>
         </div>
       </div>
