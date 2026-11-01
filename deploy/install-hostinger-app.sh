@@ -26,6 +26,9 @@ trap 'rm -f "$pending_rules"' EXIT
 } > "$pending_rules"
 # Copy bundles before index.html so the previous page remains usable during upload.
 cp -a "$release_dir/app/assets/." "$site_root/app/assets/"
+# ZIP extraction can create private files; public bundles must be readable.
+find "$site_root/app/assets" -type d -exec chmod 755 {} +
+find "$site_root/app/assets" -type f -exec chmod 644 {} +
 cp "$release_dir/app/.htaccess" "$site_root/app/.htaccess"
 cp "$release_dir/app/index.html" "$site_root/app/index.html"
 chmod 644 "$pending_rules" "$site_root/app/.htaccess" "$site_root/app/index.html"
