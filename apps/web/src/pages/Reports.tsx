@@ -11,11 +11,13 @@ import {
   type ReportRow,
   type ReportType
 } from "../lib/reports";
+import { supabase } from "../lib/supabase";
 import { useTenant } from "../lib/tenant";
 
 export default function Reports() {
   const { activeTenant } = useTenant();
   const navigate = useNavigate();
+  const [canGenerate, setCanGenerate] = useState(false);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [inspections, setInspections] = useState<any[]>([]);
   const [properties, setProperties] = useState<FireDoorReportProperty[]>([]);
@@ -34,10 +36,13 @@ export default function Reports() {
     setLoading(true);
     setError("");
     try {
+      const access = await supabase?.rpc("has_permission", {target_company: activeTenant.id, permission_code: "report.generate"});
+      const allowed = access?.data === true;
+      setCanGenerate(allowed);
       const [r, i, p] = await Promise.all([
         loadReports(activeTenant.id),
-        loadSubmittedInspections(activeTenant.id),
-        loadFireDoorReportProperties(activeTenant.id)
+        allowed ? loadSubmittedInspections(activeTenant.id) : Promise.resolve([]),
+        allowed ? loadFireDoorReportProperties(activeTenant.id) : Promise.resolve([])
       ]);
       setReports(r);
       setInspections(i);
@@ -101,6 +106,7 @@ export default function Reports() {
 
       {error && <div className="warning">{error}</div>}
 
+      {canGenerate && <>
       <section className="panel">
         <div className="eyebrow">PROPERTY FIRE DOOR REPORT</div>
         <h2>Create one controlled report for a complete fire-door programme</h2>
@@ -159,6 +165,7 @@ export default function Reports() {
         )}
       </section>
 
+      </>}
       <section>
         <div className="page-toolbar">
           <div>

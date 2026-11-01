@@ -206,7 +206,7 @@ export default function ReportDetail() {
 
           <h2>Evidence register</h2>
           <p>{evidence.length} inspection evidence item(s) recorded.</p>
-          <ReportEvidence items={evidence} inspectionId={report.inspection_id || undefined} />
+          <ReportEvidence items={evidence} inspectionId={report.inspection_id || undefined} reportId={report.id} />
           <h2>Reviewed completion evidence</h2>
           {completions.length === 0 ? <p>No accepted completion submission was recorded when this report version was generated.</p> : completions.map((c: any) => (
             <section key={c.id}>
