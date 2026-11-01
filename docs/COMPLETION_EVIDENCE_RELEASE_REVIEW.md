@@ -20,7 +20,7 @@ Development branch only. The migration has been executed in a transaction for va
 
 ## Material limits / customer release blockers
 
-1. Browser authentication and active tenant membership: the existing operations account is present but has no active membership for ASUKA247. No privileges have been added to it.
+1. Browser sign-in succeeded using a securely supplied existing authorised account. Tenant selection, a labelled dummy property, two dummy asset registrations and manual lookup were verified. The operations account itself still has no active membership; no privileges were added to it. The browser inspection stopped because the Security Test Tenant has no active FIRE_DOOR template. A request to create an isolated demonstration template expired without applying changes.
 2. Real binary uploads, image download/signing, camera behaviour, reloads and print output still need signed-in browser/mobile verification. The database run used metadata fixtures, not real uploaded images.
 3. Test actual customer property restrictions and the portal's document-download journey. The current portal lists documents but lacks a completed customer download flow. A denied helper call or query against an empty foreign tenant is not a complete tenant-isolation suite.
 4. No guest upload-link or QR-request flow is deployed.
@@ -36,3 +36,9 @@ Use an authorised existing account; stage the combined migration and web build; 
 ## Database reproduction
 
 In a trusted Supabase SQL test connection, execute `BEGIN`, the new migration, `tests/completion-dummy-run.sql`, and `ROLLBACK` as one transaction. The test requires the pre-existing operations account referenced in the fixture. Use non-production whenever available; never omit rollback against a live project. Capture the final `dummy_run` JSON before rollback. No secret keys or passwords are required or present in the test.
+
+## Browser continuation
+
+The two browser-created records remain labelled `QA-BROWSER-001` and `QA-BROWSER-002` under `ORION DUMMY RUN 01NOV2026 — NOT A CUSTOMER` in `ORION Security Test Tenant`. They are not the rolled-back `QA-DOOR-001/002` database fixtures. No browser inspection, binary upload, browser-generated PDF or delivery has passed yet. Camera detection was unavailable in this cloud browser; the manual fallback successfully opened QA-BROWSER-002. The regulatory module loaded and reported no commissioned sources in the test tenant.
+
+GitHub Actions release checks and Netlify's PR deployment-preview build passed for commit 4267cf14f0f1a7a449cd88bf62b5a37659f0f90a. A successful preview build does not prove the new database migration or browser workflow has been deployed/tested. The production branch is unchanged.
