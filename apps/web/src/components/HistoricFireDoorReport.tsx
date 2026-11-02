@@ -6,14 +6,23 @@ type SourceFile={filename:string;sha256:string;storage_path:string;bucket:string
 type Photo=SourceFile & {photo_ref:number;source_page:number};
 let signing=0;const waiting:(()=>void)[]=[];
 async function photoUrl(path:string){
- if(signing>=6)await new Promise<void>(resolve=>waiting.push(resolve));
+ if(signing>=4)await new Promise<void>(resolve=>waiting.push(resolve));
  signing++;
- try{if(!supabase)throw Error('Storage unavailable');const r=await supabase.storage.from('generated-documents').createSignedUrl(path,900);if(r.error)throw r.error;return r.data.signedUrl;}
- finally{signing--;waiting.shift()?.();}
+ try{
+  if(!supabase)throw Error('Storage unavailable');
+  for(let attempt=0;attempt<3;attempt++){
+   try{const r=await supabase.storage.from('generated-documents').download(path);if(r.error)throw r.error;return URL.createObjectURL(r.data);}
+   catch(e){if(attempt===2)throw e;await new Promise(resolve=>setTimeout(resolve,400*(attempt+1)));}
+  }
+  throw Error('Source photograph unavailable');
+ }finally{signing--;waiting.shift()?.();}
 }
 function Photos({photos}:{photos:Photo[]}){
  const [rows,setRows]=useState<{photo:Photo;url:string}[]>([]);const [error,setError]=useState('');
- useEffect(()=>{let active=true;setRows([]);setError('');Promise.all(photos.map(async p=>({photo:p,url:await photoUrl(p.storage_path)}))).then(r=>{if(active)setRows(r);}).catch(()=>{if(active)setError('Some source photographs could not be loaded. Do not treat this as complete evidence.');});return()=>{active=false;};},[photos]);
+ useEffect(()=>{let active=true;const urls:string[]=[];setRows([]);setError('');
+  Promise.all(photos.map(async p=>{const url=await photoUrl(p.storage_path);if(!active){URL.revokeObjectURL(url);return {photo:p,url:''};}urls.push(url);return {photo:p,url};})).then(r=>{if(active)setRows(r);}).catch(()=>{if(active)setError('Some source photographs could not be loaded. Do not treat this as complete evidence.');});
+  return()=>{active=false;urls.forEach(url=>URL.revokeObjectURL(url));};
+ },[photos]);
  return <div className="report-evidence-grid">{error&&<p role="alert">{error}</p>}{!error&&rows.length<photos.length&&<p role="status">Loading source photographs…</p>}{rows.map(({photo:p,url})=><figure key={p.photo_ref}><img src={url} alt={`RPS photograph ${p.photo_ref}; original page ${p.source_page}`} onError={()=>setError('A source photograph is unavailable. Check storage before printing.')} /><figcaption>RPS photograph {p.photo_ref} · original page {p.source_page}</figcaption></figure>)}</div>;
 }
 function SourceFilesUpload({files,companyId}:{files:SourceFile[];companyId:string}){
