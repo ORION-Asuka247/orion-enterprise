@@ -123,7 +123,7 @@ export default function Portal() {
               <p>Create the first property before client documents and property-specific collaboration can be enabled.</p>
             </section>
           ) : (
-            <div className="grid two">
+            <div className="grid two portal-layout">
               <section className="panel">
                 <div className="eyebrow">CONTROLLED COMMUNICATION</div>
                 <h2>Property messages</h2>
@@ -154,12 +154,12 @@ export default function Portal() {
               <section className="panel">
                 <div className="eyebrow">DOCUMENT VAULT</div>
                 <h2>Issued reports</h2>
-                {issuedReports.length === 0 ? <p>No issued reports are available yet.</p> : <ul className="clean">{issuedReports.map(r => <li key={r.id}><Link to={`/reports/${r.id}`}>{r.document_number} · {r.title}</Link></li>)}</ul>}
+                {issuedReports.length === 0 ? <p>No issued reports are available yet.</p> : <ul className="portal-report-list">{issuedReports.map(r => <li key={r.id}><Link to={`/reports/${r.id}`}>{r.document_number} · {r.title}</Link></li>)}</ul>}
                 <h2>Shared records</h2>
                 {documents.length === 0 ? (
                   <p className="muted">No client-facing documents have been placed in the portal vault yet.</p>
                 ) : (
-                  <ul className="clean">
+                  <ul className="portal-document-list">
                     {documents.map(row => (
                       <li key={row.id}>
                         <b>{row.category || "File"}</b>

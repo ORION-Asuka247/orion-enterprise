@@ -191,3 +191,15 @@ button.secondary{background:#1a232d;color:#d9e1e9;border:1px solid #344150}
 .report-evidence-grid figcaption { font-size: 12px; margin-top: 6px; overflow-wrap: anywhere; }
 .dummy-report-banner { background: #fff1c2; color: #3c2d00; border: 2px solid #a57300; padding: 16px; font-weight: bold; margin: 16px 0; }
 @media print { .report-evidence-grid { grid-template-columns: 1fr 1fr; } .dummy-report-banner { display: block !important; } }
+
+/* Customer vault uses full-width rows, not the dashboard's icon columns. */
+.portal-layout>section{min-width:0}
+.portal-report-list,.portal-document-list{list-style:none;padding:0;margin:0}
+.portal-report-list li,.portal-document-list li{border-top:1px solid #e7edf2;padding:14px 0}
+.portal-report-list li:first-child,.portal-document-list li:first-child{border-top:0}
+.portal-report-list a{display:block;overflow-wrap:anywhere;line-height:1.6}
+.portal-document-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:start}
+.portal-document-list li>b{grid-column:1/-1;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+.portal-document-list li>span{min-width:0;overflow-wrap:anywhere;line-height:1.6}
+.portal-document-list button{white-space:nowrap;align-self:start}
+@media(max-width:560px){.portal-document-list li{grid-template-columns:minmax(0,1fr)}.portal-document-list button{justify-self:start}}
