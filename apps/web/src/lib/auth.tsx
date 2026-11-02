@@ -7,6 +7,8 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  passwordSetup: boolean;
+  finishPasswordSetup(): void;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
 };
@@ -16,6 +18,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordSetup,setPasswordSetup] = useState(window.location.pathname.endsWith("/setup-password"));
 
   useEffect(() => {
     if (!supabase) {
@@ -32,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
       authVersion++;
+      if (_event === "PASSWORD_RECOVERY") setPasswordSetup(true);
       if (active) { setSession(next); setLoading(false); }
     });
 
@@ -40,6 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
+    passwordSetup,
+    finishPasswordSetup(){setPasswordSetup(false);window.history.replaceState({}, "", import.meta.env.BASE_URL);},
     user: session?.user ?? null,
     loading,
     async signIn(email, password) {
@@ -51,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!supabase) return;
       await supabase.auth.signOut();
     }
-  }), [session, loading]);
+  }), [session, loading, passwordSetup]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

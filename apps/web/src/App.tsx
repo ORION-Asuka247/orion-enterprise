@@ -3,6 +3,9 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Shell from "./components/Shell";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Properties = lazy(() => import("./pages/Properties"));
+import {useTenant} from "./lib/tenant";
+const CustomerAssets = lazy(() => import("./pages/CustomerAssets"));
+function AssetRegister(){const {activeTenant}=useTenant();return activeTenant?.isCustomer?<CustomerAssets/>:<Assets/>;}
 const Assets = lazy(() => import("./pages/Assets"));
 const AssetDetail = lazy(() => import("./pages/AssetDetail"));
 const AssetScan = lazy(() => import("./pages/AssetScan"));
@@ -24,7 +27,7 @@ const router = createBrowserRouter([{
     { index: true, element: <Dashboard /> },
     { path: "setup", element: <Setup /> },
     { path: "properties", element: <Properties /> },
-    { path: "assets", element: <Assets /> },
+    { path: "assets", element: <AssetRegister /> },
     { path: "assets/scan", element: <AssetScan /> },
     // Keep specific asset workflow routes ahead of the generic asset detail route.
     { path: "assets/:assetId/inspect/:inspectionId", element: <AssetInspection /> },

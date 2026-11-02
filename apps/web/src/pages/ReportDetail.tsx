@@ -167,7 +167,7 @@ export default function ReportDetail() {
         <div className="inspection-actions">
           <Link className="button-link secondary-link" to="/reports">Back to reports</Link>
           {canIssue && report.status === "generated" && <button onClick={markIssued} disabled={issuing}>{issuing ? "Issuing..." : "Mark issued"}</button>}
-          <button type="button" onClick={() => window.print()}>Print / Save PDF</button>
+          {!s.historic_source && <button type="button" onClick={() => window.print()}>Print / Save PDF</button>}
         </div>
       </div>
       {error && <div className="warning">{error}</div>}
