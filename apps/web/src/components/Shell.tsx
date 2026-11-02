@@ -20,8 +20,8 @@ export default function Shell() {
   const { tenants, activeTenant, loading, error, setActiveTenant } = useTenant();
   const { pathname } = useLocation();
   const customer = activeTenant?.isCustomer === true;
-  const availableNav = customer ? nav.filter(([to]) => to === "/portal" || to === "/reports") : nav;
-  const customerRoute = pathname === "/portal" || pathname === "/reports" || pathname.startsWith("/reports/");
+  const availableNav = customer ? nav.filter(([to]) => to === "/portal" || to === "/reports" || to === "/assets") : nav;
+  const customerRoute = pathname === "/assets" || pathname === "/portal" || pathname === "/reports" || pathname.startsWith("/reports/");
 
   return <div className="app-shell">
     <aside>
@@ -60,7 +60,7 @@ export default function Shell() {
           <div className="eyebrow">COMPLIANCE OPERATING SYSTEM</div>
           <strong>{activeTenant?.name ?? "ORION Enterprise"}</strong>
         </div>
-        <div className="pill">Review build</div>
+        <div className="pill">{activeTenant?.slug === "chiswick-cnc-demonstration" ? "Customer demonstration" : "ORION Enterprise"}</div>
       </header>
       <section className="content">
         {loading ? <div className="panel" role="status">Loading workspace…</div> :
