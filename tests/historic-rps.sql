@@ -1,0 +1,33 @@
+-- Append to existing rolled-back QA fixtures; no real source/customer data.
+do $$ declare prop uuid;c uuid;staff uuid;client_user uuid;asset uuid;report_id uuid;s jsonb;before_runs bigint;b boolean;
+begin
+ select (snapshot->'property'->>'id')::uuid into prop from orion_qa_reports limit 1;
+ select company_id into c from public.properties where id=prop;
+ select user_id into staff from public.company_memberships m join public.roles r on r.id=m.role_id where m.company_id=c and r.code='company_admin' limit 1;
+ select user_id into client_user from public.company_memberships m join public.roles r on r.id=m.role_id where m.company_id=c and r.code='client' limit 1;
+ select id into asset from public.assets where property_id=prop limit 1;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',staff,'role','authenticated')::text,true);perform set_config('request.jwt.claim.sub',staff::text,true);
+ set local role authenticated;
+ report_id:=public.orion_generate_property_fire_door_report(prop,'QA normal report compatibility');
+ reset role;
+ select v.source_snapshot into s from public.orion_report_versions v join public.orion_reports r on r.id=v.report_id where r.property_id=prop and v.version_no=r.current_version;
+ insert into orion_qa_results values('Ordinary property report remains compatible',not(s ? 'historic_source'),'{}');
+ select count(*) into before_runs from public.orion_inspection_runs where company_id=c;
+ update public.assets set metadata=metadata||'{"historic_source":{"assessment_ref":"QA-HISTORIC","files":[],"available_pages":[1],"expected_pages":2},"historic_rps":{"actions":[{"reference":"QA-ACTION","description":"Historic replacement instruction retained"}],"photos":[],"detail_available":false,"source_door_id":"QA-HISTORIC","floor":"Unknown"}}'::jsonb where id=asset;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',staff,'role','authenticated')::text,true);
+ set local role authenticated;
+ report_id:=public.orion_generate_property_fire_door_report(prop,'Historic source QA');
+ begin perform public.orion_build_historic_fire_door_snapshot(prop);b:=false;exception when insufficient_privilege then b:=true;end;
+ reset role;
+ insert into orion_qa_results values('Raw historic snapshot helper is not a browser API',b,'{}');
+ select v.source_snapshot into s from public.orion_report_versions v join public.orion_reports r on r.id=v.report_id where r.property_id=prop and v.version_no=r.current_version;
+ insert into orion_qa_results values('Historic report preserves source provenance',s->'historic_source'->>'assessment_ref'='QA-HISTORIC','{}');
+ insert into orion_qa_results values('Historic actions remain source actions',(s->'summary'->>'actions')::int=1 and s->'doors'->0->'actions'->0->>'description'='Historic replacement instruction retained','{}');
+ insert into orion_qa_results values('Historic report does not create fresh inspection runs',(select count(*)=before_runs from public.orion_inspection_runs where company_id=c),'{}');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',client_user,'role','authenticated')::text,true);perform set_config('request.jwt.claim.sub',client_user::text,true);
+ set local role authenticated;
+ begin perform public.orion_generate_property_fire_door_report(prop,'Must be denied');b:=false;exception when others then b:=sqlerrm like '%permission%';end;
+ reset role;
+ insert into orion_qa_results values('Customer cannot generate historic source reports',b,'{}');
+end $$;
+select jsonb_build_object('tests',(select jsonb_agg(to_jsonb(t)) from orion_qa_results t)) as tests;

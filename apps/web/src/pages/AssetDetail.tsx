@@ -109,7 +109,7 @@ export default function AssetDetail() {
       <div className="page-toolbar">
         <div><p className="muted">{asset.name || asset.asset_types?.name || "ORION asset"}</p></div>
         <div className="toolbar-actions">
-          <Link className="button-link" to={`/assets/${asset.id}/inspect`}>Start inspection</Link>
+          {!asset.metadata?.historic_rps && <Link className="button-link" to={`/assets/${asset.id}/inspect`}>Start inspection</Link>}
           <Link className="button-link secondary-link" to="/assets">Asset register</Link>
           <Link className="button-link secondary-link" to="/assets/scan">Scan another</Link>
         </div>
