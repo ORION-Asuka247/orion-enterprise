@@ -48,7 +48,7 @@ export default function HistoricFireDoorReport({snapshot:s,documentNumber,versio
   setPreparing(true);setError('');setAllPhotos(true);
   try{
    const expected=doors.reduce((n,d)=>n+(d.photos?.length||0),0);
-   const deadline=Date.now()+120000;
+   const deadline=Date.now()+300000;
    while(true){
     await new Promise(resolve=>setTimeout(resolve,150));
     const root=reportRoot.current;
