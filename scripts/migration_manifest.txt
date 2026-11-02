@@ -28,3 +28,7 @@
 20261101144255_intelligence_ai_audit.sql
 
 20261102081700_historic_rps_reports.sql
+
+20261102091442_temporary_customer_demo_access.sql
+
+20261102091917_historic_customer_source_access.sql
