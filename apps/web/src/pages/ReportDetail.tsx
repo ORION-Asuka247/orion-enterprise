@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReportEvidence from "../components/ReportEvidence";
+import HistoricFireDoorReport from "../components/HistoricFireDoorReport";
 import Page from "../components/Page";
 import { supabase } from "../lib/supabase";
 import { issueReport, loadReport, loadReportVersions, type ReportRow, type ReportVersion } from "../lib/reports";
@@ -170,9 +171,9 @@ export default function ReportDetail() {
         </div>
       </div>
       {error && <div className="warning">{error}</div>}
-      {isDummy && <div className="dummy-report-banner">TEST ONLY — SIMULATED DATA — NOT A CUSTOMER REPORT OR CERTIFICATE</div>}
+      {isDummy && !s.historic_source && <div className="dummy-report-banner">TEST ONLY — SIMULATED DATA — NOT A CUSTOMER REPORT OR CERTIFICATE</div>}
 
-      {report.report_type === "property_fire_door_report" ? propertyFireDoorReport(report, selected) : (
+      {s.historic_source ? <HistoricFireDoorReport snapshot={s} documentNumber={report.document_number} version={selected.version_no} companyId={report.company_id} canUpload={canIssue} /> : report.report_type === "property_fire_door_report" ? propertyFireDoorReport(report, selected) : (
         <article className="panel report-sheet">
           <div className="eyebrow">ASUKA247 · ORION ENTERPRISE</div>
           <h1>{report.title}</h1>
