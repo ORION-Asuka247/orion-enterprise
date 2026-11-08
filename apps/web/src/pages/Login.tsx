@@ -4,7 +4,7 @@ import {supabase} from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, error: sessionError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -40,7 +40,7 @@ export default function Login() {
         <input id="orion-email" autoComplete="username" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
         {!recovering&&<><label htmlFor="orion-password">Password</label>
         <input id="orion-password" autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required /></>}
-        {error && <div className="warning">{error}</div>}
+        {(error || sessionError) && <div className="warning" role="alert">{error || sessionError}</div>}
         {notice&&<p role="status">{notice}</p>}
         <button disabled={busy}>{busy ? "Please wait…" : recovering?"Send reset link":"Sign in"}</button>
         <button type="button" className="secondary" disabled={busy} onClick={()=>{setRecovering(!recovering);setError('');setNotice('');setPassword('');}}>{recovering?'Back to sign in':'Forgot password?'}</button>

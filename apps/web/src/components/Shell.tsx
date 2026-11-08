@@ -1,5 +1,5 @@
 import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useAuth } from "../lib/auth";
 import { useTenant } from "../lib/tenant";
 
@@ -17,6 +17,14 @@ const nav = [
 
 export default function Shell() {
   const { signOut } = useAuth();
+  const [signOutError, setSignOutError] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
+  async function leave() {
+    setSigningOut(true); setSignOutError("");
+    try { await signOut(); }
+    catch { setSignOutError("Unable to sign out. Check your connection and try again."); }
+    finally { setSigningOut(false); }
+  }
   const { tenants, activeTenant, loading, error, setActiveTenant } = useTenant();
   const { pathname } = useLocation();
   const customer = activeTenant?.isCustomer === true;
@@ -51,7 +59,8 @@ export default function Shell() {
         <NavLink key={to} to={to} end={to === "/"}>{label}</NavLink>
       )}</nav>
 
-      <button className="signout" onClick={() => signOut()}>Sign out</button>
+      <button className="signout" disabled={signingOut} onClick={leave}>{signingOut ? "Signing out…" : "Sign out"}</button>
+      {signOutError && <p role="alert">{signOutError}</p>}
       <div className="aside-foot">ORION Enterprise v1.0</div>
     </aside>
     <main>
