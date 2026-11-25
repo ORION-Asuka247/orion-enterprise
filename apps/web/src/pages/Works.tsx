@@ -77,6 +77,7 @@ export default function Works() {
         if (!cancelled) setCommercialAccessLoading(false);
         return;
       }
+      if (!cancelled) setCommercialAccess(true);
       try {
         const config = await loadPricingConfig(companyId);
         if (!cancelled) {
@@ -163,7 +164,7 @@ export default function Works() {
           <div><span>Packages</span><strong>{packages.length}</strong></div>
           <div><span>Technical actions</span><strong>{technicalActions}</strong></div>
           <div><span>Manual review</span><strong>{packagesNeedingReview}</strong></div>
-          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : pricingVisible && pricing ? `${pricing.readyCount} PRICE READY` : "RESTRICTED"}</strong></div>
+          <div><span>Commercial status</span><strong>{commercialAccessLoading ? "CHECKING" : !commercialAccess ? "RESTRICTED" : !pricingConfig ? "UNAVAILABLE" : !activeRate ? "RATES NOT CONFIGURED" : pricing ? `${pricing.readyCount} PRICE READY` : "UNAVAILABLE"}</strong></div>
         </div>
 
         <div className="warning" style={{ marginTop: 16 }}>
@@ -220,10 +221,20 @@ export default function Works() {
           </section>
         )}
 
-        {!commercialAccessLoading && !pricingVisible && (
+        {!commercialAccessLoading && !commercialAccess && (
           <div className="panel" style={{ marginTop: 18 }}>
             <div className="eyebrow">COMMERCIAL INFORMATION RESTRICTED</div>
             <p className="muted">Internal ASUKA247 rates, account discounts, material allowances and selling calculations require the <strong>{COMMERCIAL_PRICING_PERMISSION}</strong> permission. Technical remedial packages remain available for operational use.</p>
+          </div>
+        )}
+
+        {!commercialAccessLoading && commercialAccess && !pricingVisible && (
+          <div className="panel" style={{ marginTop: 18 }}>
+            <div className="eyebrow">{pricingConfig ? "RATES NOT CONFIGURED" : "RATE CARD UNAVAILABLE"}</div>
+            <p className="muted">{pricingConfig
+              ? "You have access to commercial pricing. The selected rate profile has not been configured for this workspace. Approved rates are required before quotation totals can be calculated."
+              : "You have access to commercial pricing, but the rate card could not be loaded. Refresh the page to try again."}</p>
+            <Link to="/reports">View uploaded reports and source findings</Link>
           </div>
         )}
 
